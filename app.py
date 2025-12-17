@@ -4,35 +4,34 @@ import google.generativeai as genai
 # --- 1. SAYFA VE TEMA AYARLARI ---
 st.set_page_config(page_title="Kiniğin Tarotu", page_icon="🔮", layout="wide")
 
-# Klas & Modern CSS (Tüm hataları ezen güçlü tasarım)
+# --- MODERN & KLAS CSS (Yazı Alanı Düzeltilmiş) ---
 st.markdown("""
     <style>
+    /* Ana Arka Plan */
     .stApp {
         background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
         color: #e0e0e0;
     }
-    .main-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-weight: 800;
-        letter-spacing: 8px;
-        text-align: center;
-        color: #ffffff;
-        text-transform: uppercase;
-        padding-top: 20px;
-    }
-    .sub-title {
-        text-align: center;
-        color: #666;
-        font-size: 0.8em;
-        letter-spacing: 3px;
-        margin-bottom: 50px;
-    }
-    .stTextInput input {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
+    
+    /* YAZI YAZILAN ALAN (INPUT BOX) AYARLARI */
+    /* Burası beyaz zemin sorununu çözer */
+    .stTextInput div[data-baseweb="input"] {
+        background-color: #1a1c23 !important; /* Koyu Gri/Siyah zemin */
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 12px !important;
     }
+    
+    .stTextInput input {
+        color: #ffffff !important; /* Yazı rengi bembeyaz */
+        background-color: transparent !important;
+    }
+
+    /* Çoklu Seçim (Multiselect) Alanı */
+    .stMultiSelect div[data-baseweb="select"] {
+        background-color: #1a1c23 !important;
+    }
+    
+    /* Buton Tasarımı */
     .stButton button {
         width: 100%;
         background: linear-gradient(45deg, #333, #000) !important;
@@ -40,26 +39,15 @@ st.markdown("""
         border: 1px solid #444 !important;
         border-radius: 25px !important;
         font-weight: bold !important;
-        letter-spacing: 2px !important;
         height: 3.5em !important;
-        transition: 0.4s;
     }
-    .stButton button:hover {
-        background: #ffffff !important;
-        color: #000000 !important;
-    }
-    .report-box {
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 20px;
-        padding: 35px;
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        line-height: 1.8;
-        font-family: 'Georgia', serif;
-        color: #e0e0e0;
-    }
-    /* Multiselect renkleri */
-    span[data-baseweb="tag"] {
-        background-color: #ff4b4b !important;
+    
+    /* Başlıklar */
+    .main-title {
+        color: #ffffff;
+        text-align: center;
+        letter-spacing: 8px;
+        font-weight: 800;
     }
     </style>
     """, unsafe_allow_html=True)
