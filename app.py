@@ -4,11 +4,11 @@ import google.generativeai as genai
 # --- 1. SAYFA VE TEMA AYARLARI ---
 st.set_page_config(page_title="Kiniğin Tarotu", page_icon="🔮", layout="wide")
 
-# Klas & Modern CSS (Glassmorphism ve Executive Dark)
+# Klas & Modern CSS (Tüm hataları ezen güçlü tasarım)
 st.markdown("""
     <style>
     .stApp {
-        background: radial-gradient(row, #1a1a1a 0%, #000000 100%);
+        background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
         color: #e0e0e0;
     }
     .main-title {
@@ -55,14 +55,56 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.07);
         line-height: 1.8;
         font-family: 'Georgia', serif;
+        color: #e0e0e0;
+    }
+    /* Multiselect renkleri */
+    span[data-baseweb="tag"] {
+        background-color: #ff4b4b !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
+# --- 2. API VE MODEL YÖNETİMİ ---
+# BURAYA KENDİ ANAHTARINI YAPIŞTIR
 genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
 
 @st.cache_resource
 def load_dynamic_model():
-    # 404 hatalarını önlemek için çalışan modelleri tara
     try:
+        # Çalışan modelleri listele
         working_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Varsa 1.5-flash, yoksa listedeki ilk modeli seç
+        target = next((m for m in working_models if '1.5-flash' in m), working_models[0])
+        return genai.GenerativeModel(target), target
+    except Exception:
+        # Hata durumunda güvenli liman
+        return genai.GenerativeModel('gemini-pro'), "gemini-pro"
+
+model, model_name = load_dynamic_model()
+
+# --- 3. ARAYÜZ ---
+st.markdown('<h1 class="main-title">KİNİĞİN TAROTU</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">FINANCIAL RISK & ARCHETYPAL ANALYSIS</p>', unsafe_allow_html=True)
+
+c1, c2, c3 = st.columns([1, 2, 1])
+with c2:
+    soru = st.text_input("", placeholder="Analiz edilecek senaryoyu girin...")
+    zayifliklar = st.multiselect("Sistem Zafiyetleri:", ["Disiplinsizlik", "Panik", "Kararsızlık", "Erteleme"])
+    
+    st.write("")
+    if st.button("ANALİZİ BAŞLAT"):
+        if soru:
+            with st.spinner('Kınik zekâ verileri işliyor...'):
+                try:
+                    prompt = f"Sen Kiniğin Tarotu'sun. Ekonomi mezunu sert bir analistsin. Soru: {soru}. Zayıflıklar: {zayifliklar}. 3 kart seç ve ekonomi diliyle dürüstçe yorumla."
+                    response = model.generate_content(prompt)
+                    st.markdown('<div class="report-box">', unsafe_allow_html=True)
+                    st.markdown(response.text)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Sistem hatası: {e}")
+        else:
+            st.warning("Lütfen bir soru girin.")
+
+st.sidebar.caption(f"⚙️ Kernel: {model_name}")
+st.sidebar.caption("📊 Dev: Hilal Erol | v3.1 Executive")
