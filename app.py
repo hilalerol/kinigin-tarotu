@@ -65,4 +65,4 @@ genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
 def load_dynamic_model():
     # 404 hatalarını önlemek için çalışan modelleri tara
     try:
-        working_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation
+        working_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
