@@ -75,7 +75,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # --- 6. API VE MODEL YÜKLEME (KESİN ÇÖZÜM) ---
-genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
+genai.configure(api_key="AIzaSyC8knFCnlZI1EKpZnwmbNexMEH1fKPPMmk")
 
 @st.cache_resource
 def get_model():
