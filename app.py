@@ -41,7 +41,7 @@ with st.sidebar:
     st.title("🌐 Language")
     st.session_state.lang = st.radio("", ["Türkçe", "English"])
     st.divider()
-    st.caption("Dev: Hilal Erol | v12.0 Final")
+    st.caption("Dev: Hilal Erol | v12.5 Platinum")
 
 L = texts[st.session_state.lang]
 
@@ -50,7 +50,7 @@ def create_pdf(text, lang):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
-    title = "KİNİĞİN TAROTU - RAPOR" if lang == "Türkçe" else "THE CYNIC'S TAROT - REPORT"
+    title = "KINIGIN TAROTU - RAPOR" if lang == "Türkçe" else "THE CYNIC'S TAROT - REPORT"
     pdf.cell(190, 10, title, ln=True, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", size=12)
@@ -63,32 +63,22 @@ def create_pdf(text, lang):
     pdf.multi_cell(0, 10, safe_text)
     return pdf.output(dest="S").encode('latin-1')
 
-# --- 5. CSS ---
+# --- 5. CSS (TASARIM) ---
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #000000; color: #ffffff; }}
-    .main-title {{ font-family: serif; text-align: center; letter-spacing: 8px; color: #ffffff; }}
-    .stButton button {{ background-color: #0a0a0a !important; border: 1px solid #333 !important; color: #555 !important; font-size: 16px !important; width: 100% !important; }}
+    .main-title {{ font-family: serif; text-align: center; letter-spacing: 8px; color: #ffffff; padding-top: 20px; }}
+    .stButton button {{ background-color: #0a0a0a !important; border: 1px solid #333 !important; color: #666 !important; font-size: 16px !important; width: 100% !important; height: 50px; }}
     .stButton button:hover {{ border-color: #ff4b4b !important; color: white !important; }}
-    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border: 1px solid #222; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; font-family: 'Georgia', serif; line-height: 1.8; }}
+    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border: 1px solid #222; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; line-height: 1.8; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API VE MODEL (HATA KORUMALI) ---
-# Tırnak içine anahtarı değil, panelde verdiğin ismi yazıyoruz
-genai.configure(api_key=st.secrets["MY_API_KEY"])
-model = genai.GenerativeModel('gemini-pro') # En kararlı model budur
-
-def generate_ai_response(prompt_text):
-    # Sırasıyla çalışan modeli bulmaya çalışır
-    for model_name in ['gemini-1.5-flash', 'gemini-pro', 'models/gemini-1.5-flash']:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt_text)
-            return response.text
-        except Exception:
-            continue
-    return None
+# --- 6. API YAPILANDIRMASI ---
+try:
+    genai.configure(api_key=st.secrets["MY_API_KEY"])
+except:
+    st.error("Secrets ayarı eksik! Lütfen MY_API_KEY tanımlayın.")
 
 # --- 7. ARAYÜZ ---
 st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
@@ -96,6 +86,7 @@ st.write(f"<p style='text-align:center; color:#444;'>{L['sub']}</p>", unsafe_all
 
 soru = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
 
+# KART MATRİSİ
 if not st.session_state.analiz_edildi:
     st.write(f"### ✧ {len(st.session_state.secilen_indeksler)} / 3")
     for row in range(6):
@@ -118,6 +109,7 @@ if len(st.session_state.secilen_indeksler) == 3 and not st.session_state.analiz_
         st.session_state.analiz_edildi = True
         st.rerun()
 
+# SONUÇ EKRANI
 if st.session_state.analiz_edildi:
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     st.divider()
@@ -127,14 +119,25 @@ if st.session_state.analiz_edildi:
             
     with st.spinner("..."):
         full_prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
-        report_text = generate_ai_response(full_prompt)
-        
-        if report_text:
-            st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
-            pdf_data = create_pdf(report_text, st.session_state.lang)
-            st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
-        else:
-            st.error("Google API uyarısı nedeniyle analiz yapılamadı. Lütfen API anahtarınızı AI Studio'dan kontrol edin.")
+        try:
+            # Otomatik model seçimi (Hangi model aktifse onu kullanır)
+            model_names = ['gemini-1.5-flash', 'gemini-pro']
+            response = None
+            for m_name in model_names:
+                try:
+                    model = genai.GenerativeModel(m_name)
+                    response = model.generate_content(full_prompt)
+                    if response: break
+                except: continue
+            
+            if response:
+                st.markdown(f'<div class="report-box">{response.text}</div>', unsafe_allow_html=True)
+                pdf_data = create_pdf(response.text, st.session_state.lang)
+                st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
+            else:
+                st.error("Google API yanıt vermiyor. Lütfen yeni bir API anahtarı ile Secrets kısmını güncelleyin.")
+        except Exception as e:
+            st.error(f"Sistemsel Hata: {str(e)}")
     
     if st.button(L["btn_reset"]):
         st.session_state.secilen_indeksler = []
