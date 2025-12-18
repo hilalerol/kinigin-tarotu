@@ -67,16 +67,27 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API ---
+# --- 6. API VE DİNAMİK MODEL BULUCU ---
 genai.configure(api_key=st.secrets["MY_API_KEY"])
+
+def get_best_model():
+    try:
+        # Google'a "sende hangi modeller var?" diye soruyoruz
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        # Öncelik sırası: Flash 1.5 -> Pro 1.5 -> Eski Pro
+        for target in ['models/gemini-1.5-flash', 'gemini-1.5-flash', 'models/gemini-pro', 'gemini-pro']:
+            if target in available_models:
+                return genai.GenerativeModel(target)
+        return genai.GenerativeModel(available_models[0]) if available_models else None
+    except:
+        return None
 
 # --- 7. ARAYÜZ ---
 with st.sidebar:
     st.session_state.lang = st.radio("Dil / Language", ["Türkçe", "English"])
     st.divider()
-    st.caption("Hilal Erol | v18.0")
+    st.caption("Hilal Erol | v19.0")
 
-# Profesör Her Zaman Üstte
 st.markdown(f'<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZhcWp2bXB4cWN4am14am14am14am14am14am14am14am14amImZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PXM/U6X9A55X765vP3YvP3/giphy.gif" class="witch-img">', unsafe_allow_html=True)
 st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
 
@@ -101,11 +112,10 @@ if not st.session_state.analiz_edildi:
             st.rerun()
 
 if st.session_state.analiz_edildi:
-    # Büyü Efekti
     placeholder = st.empty()
     with placeholder.container():
         st.markdown(f"<h3 style='text-align:center; color:#ff4b4b;'>{L['loading']}</h3>", unsafe_allow_html=True)
-        time.sleep(2)
+        time.sleep(2.5)
     placeholder.empty()
 
     secilen_kartlar = random.sample(TAM_DESTE, 3)
@@ -115,15 +125,17 @@ if st.session_state.analiz_edildi:
         with cols[i]: st.markdown(f"<div style='text-align:center; padding:15px; border:1px solid #222; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
     
     with st.spinner("..."):
-        try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}.")
-            st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
-            
-            pdf_val = create_pdf(response.text)
-            st.download_button(L["pdf_btn"], data=pdf_val, file_name="Kinigin_Tarotu.pdf", mime="application/pdf")
-        except Exception as e:
-            st.error(f"Hata: {e}")
+        model = get_best_model()
+        if model:
+            try:
+                response = model.generate_content(f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}.")
+                st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
+                pdf_val = create_pdf(response.text)
+                st.download_button(L["pdf_btn"], data=pdf_val, file_name="Kinigin_Tarotu.pdf", mime="application/pdf")
+            except Exception as e:
+                st.error(f"Hata: {e}")
+        else:
+            st.error("Google API ile bağlantı kurulamadı.")
 
     if st.button(L["btn_reset"]):
         st.session_state.secilen_indeksler = []
