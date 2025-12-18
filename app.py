@@ -147,7 +147,7 @@ elif st.session_state.step == "payment":
     st.write("Analizinin mail kutuna düşmesi için Minerva'ya bir kahve ısmarla.")
     
     # BURAYI KENDİ LİNKİNLE DEĞİŞTİR
-    b_link = "https://www.banabikahve.com/KULLANICI_ADIN" 
+    b_link = "https://buymeacoffee.com/thesynicstarot" 
     st.markdown(f'<a href="{b_link}" target="_blank" class="coffee-btn">☕ KAHVE ISMARLA (50 TL)</a>', unsafe_allow_html=True)
     
     st.write("---")
