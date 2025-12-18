@@ -42,19 +42,20 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 2. API BAĞLANTISI ---
+# Not: MY_API_KEY Streamlit Secrets panelinden ayarlanmış olmalı
 genai.configure(api_key=st.secrets["MY_API_KEY"])
 
-def get_model():
+def get_best_model():
     try:
         models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for m in ['models/gemini-1.5-flash', 'models/gemini-pro']:
-            if m in models: return genai.GenerativeModel(m)
-        return genai.GenerativeModel(models[0])
+        for target in ['models/gemini-1.5-flash', 'models/gemini-pro']:
+            if target in models: return genai.GenerativeModel(target)
+        return genai.GenerativeModel(models[0]) if models else None
     except: return None
 
-# --- 3. DURUM YÖNETİMİ ---
-if 'secilenler' not in st.session_state: st.session_state.secilenler = []
-if 'analiz_durum' not in st.session_state: st.session_state.analiz_durum = False
+# --- 3. SESSION STATE ---
+if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
+if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
 
 # --- 4. ARAYÜZ ---
 st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
@@ -62,44 +63,47 @@ st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=
 
 soru = st.text_input("", placeholder="Kehanetini öğrenmek için 3 kart seç", label_visibility="collapsed")
 
-# KART SEÇİMİ
-if not st.session_state.analiz_durum:
-    st.write(f"<p style='text-align:center;'>Seçilen: {len(st.session_state.secilenler)} / 3</p>", unsafe_allow_html=True)
+if not st.session_state.analiz_edildi:
     cols = st.columns(13)
     for i in range(78):
         with cols[i % 13]:
-            label = "❂" if i in st.session_state.secilenler else "✧"
-            if st.button(label, key=f"b{i}"):
-                if i not in st.session_state.secilenler and len(st.session_state.secilenler) < 3:
-                    st.session_state.secilenler.append(i)
+            label = "❂" if i in st.session_state.secilen_indeksler else "✧"
+            if st.button(label, key=f"btn_{i}"):
+                if i not in st.session_state.secilen_indeksler and len(st.session_state.secilen_indeksler) < 3:
+                    st.session_state.secilen_indeksler.append(i)
                     st.rerun()
-                elif i in st.session_state.secilenler:
-                    st.session_state.secilenler.remove(i)
+                elif i in st.session_state.secilen_indeksler:
+                    st.session_state.secilen_indeksler.remove(i)
                     st.rerun()
 
-    if len(st.session_state.secilenler) == 3:
+    if len(st.session_state.secilen_indeksler) == 3:
         if st.button("KEHANETİ AÇ", use_container_width=True):
-            st.session_state.analiz_durum = True
+            st.session_state.analiz_edildi = True
             st.rerun()
 
-# ANALİZ GÖSTERİMİ
-if st.session_state.analiz_durum:
+if st.session_state.analiz_edildi:
+    placeholder = st.empty()
+    placeholder.markdown("<h3 style='text-align:center; color:#ff4b4b;'>🔮 Profesör Minerva enerjiyi topluyor...</h3>", unsafe_allow_html=True)
+    time.sleep(2)
+    placeholder.empty()
+
     TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     
-    with st.spinner("Kehanet fısıldanıyor..."):
-        model = get_model()
+    with st.spinner("Kehanet işleniyor..."):
+        model = get_best_model()
         if model:
             try:
-                res = model.generate_content(f"Sert bir tarot analizi yap. Soru: {soru}. Kartlar: {secilen_kartlar}")
-                st.markdown(f"<div class='report-box'>{res.text}</div>", unsafe_allow_html=True)
+                prompt = f"Sen 'The Cynic's Tarot' sistemisin. Sert ve dürüst bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}."
+                response = model.generate_content(prompt)
+                st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
                 if "429" in str(e):
-                    st.warning("🔮 Yıldızlar çok yoğun. 30 saniye sonra tekrar dene.")
+                    st.warning("🌙 Kota doldu. Lütfen 30 saniye sonra tekrar basın.")
                 else:
-                    st.error("Bağlantıda bir sorun oldu.")
+                    st.error(f"Hata: {e}")
 
     if st.button("YENİDEN BAŞLA"):
-        st.session_state.secilenler = []
-        st.session_state.analiz_durum = False
+        st.session_state.secilen_indeksler = []
+        st.session_state.analiz_edildi = False
         st.rerun()
