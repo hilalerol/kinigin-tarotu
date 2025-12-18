@@ -12,7 +12,6 @@ BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress",
 KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
 
-# CSS TASARIM
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
@@ -67,10 +66,6 @@ if st.session_state.step == "form":
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         email = st.text_input("Mail adresin:")
         soru = st.text_area("Sorun nedir?")
-        c1, c2, c3 = st.columns(3)
-        with c1: yas = st.number_input("Yaşın", 15, 99, 25)
-        with c2: konu = st.selectbox("Konu", ["Genel", "Aşk", "Para"])
-        with c3: iliski = st.selectbox("İlişki", ["Var", "Yok"])
         
         st.markdown(f'<p style="color:#D4AF37; text-align:center;">🔮 Kart Seç: {len(st.session_state.sepet)}/3</p>', unsafe_allow_html=True)
         cols = st.columns(13)
@@ -88,10 +83,16 @@ if st.session_state.step == "form":
         if len(st.session_state.sepet) == 3 and email and soru:
             if st.button("KEHANETİ HAZIRLA"):
                 try:
+                    # API Bağlantısı
                     genai.configure(api_key=st.secrets["MY_API_KEY"])
+                    
+                    # ÇÖZÜM: 'models/' ön ekini tamamen kaldırdık. 
+                    # Bazı API sürümlerinde bu ön ek 404 hatasına yol açar.
                     model = genai.GenerativeModel('gemini-1.5-flash')
+                    
                     k_list = [TAM_DESTE[idx] for idx in st.session_state.sepet]
                     prompt = f"Sen sert bir tarotçusun. Soru: {soru}, Kartlar: {k_list}. Analiz yap."
+                    
                     res = model.generate_content(prompt)
                     st.session_state.final_analysis = res.text
                     st.session_state.final_email = email
@@ -99,7 +100,17 @@ if st.session_state.step == "form":
                     st.session_state.step = "payment"
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Kozmik Hata: {e}") # Hatanın ne olduğunu burada göreceğiz.
+                    # Eğer hata devam ederse gemini-pro modelini yedek olarak dener
+                    try:
+                        model = genai.GenerativeModel('gemini-pro')
+                        res = model.generate_content(prompt)
+                        st.session_state.final_analysis = res.text
+                        st.session_state.final_email = email
+                        st.session_state.final_question = soru
+                        st.session_state.step = "payment"
+                        st.rerun()
+                    except:
+                        st.error(f"Teknik Hata: {str(e)}")
         st.markdown('</div>', unsafe_allow_html=True)
 
 elif st.session_state.step == "payment":
