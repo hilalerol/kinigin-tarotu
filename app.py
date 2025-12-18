@@ -6,7 +6,7 @@ import time
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
 
-# --- 2. TASARIM (CSS BURADA OLMALI) ---
+# --- 2. TASARIM (CSS BURADA DOĞRU ŞEKİLDE PAKETLENDİ) ---
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
@@ -84,6 +84,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 3. API BAĞLANTISI ---
+# Not: MY_API_KEY Streamlit Secrets panelinden ayarlanmış olmalı
 genai.configure(api_key=st.secrets["MY_API_KEY"])
 
 def get_best_model():
@@ -140,9 +141,9 @@ if st.session_state.analiz_edildi:
                 st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
                 if "429" in str(e):
-                    st.warning("🌙 Kota doldu. Lütfen 30 saniye bekleyip tekrar basın.")
+                    st.warning("🌙 Yıldızlar yoğun. 30 saniye sonra tekrar dene.")
                 else:
-                    st.error(f"Kozmik bir engel: {e}")
+                    st.error(f"Hata: {e}")
 
     if st.button("YENİDEN BAŞLA"):
         st.session_state.secilen_indeksler = []
