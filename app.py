@@ -6,7 +6,7 @@ from fpdf import FPDF
 # --- 1. SAYFA AYARLARI ---
 st.set_page_config(page_title="The Cynic's Tarot Pro", page_icon="🔮", layout="wide")
 
-# --- 2. 78 KARTLIK DESTE ---
+# --- 2. 78 KARTLIK TAM DESTE ---
 BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant", "The Lovers", "The Chariot", "Strength", "The Hermit", "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"]
 KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
@@ -41,11 +41,11 @@ with st.sidebar:
     st.title("🌐 Language")
     st.session_state.lang = st.radio("", ["Türkçe", "English"])
     st.divider()
-    st.caption("Dev: Hilal Erol | v11.1 Platinum")
+    st.caption("Dev: Hilal Erol | v12.0 Final")
 
 L = texts[st.session_state.lang]
 
-# --- 4. PDF OLUŞTURMA FONKSİYONU ---
+# --- 4. PDF FONKSİYONU ---
 def create_pdf(text, lang):
     pdf = FPDF()
     pdf.add_page()
@@ -70,28 +70,24 @@ st.markdown(f"""
     .main-title {{ font-family: serif; text-align: center; letter-spacing: 8px; color: #ffffff; }}
     .stButton button {{ background-color: #0a0a0a !important; border: 1px solid #333 !important; color: #555 !important; font-size: 16px !important; width: 100% !important; }}
     .stButton button:hover {{ border-color: #ff4b4b !important; color: white !important; }}
-    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; }}
+    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border: 1px solid #222; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; font-family: 'Georgia', serif; line-height: 1.8; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API VE MODEL YÜKLEME (KESİN ÇÖZÜM) ---
+# --- 6. API VE MODEL (HATA KORUMALI) ---
+# BURAYA YENİ ANAHTARINI YAPIŞTIR
 genai.configure(api_key="AIzaSyC8knFCnlZI1EKpZnwmbNexMEH1fKPPMmk")
 
-@st.cache_resource
-def get_model():
-    # Hangi ismin çalıştığını otomatik bulan zeki fonksiyon
-    model_options = ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro']
-    for m_name in model_options:
+def generate_ai_response(prompt_text):
+    # Sırasıyla çalışan modeli bulmaya çalışır
+    for model_name in ['gemini-1.5-flash', 'gemini-pro', 'models/gemini-1.5-flash']:
         try:
-            m = genai.GenerativeModel(m_name)
-            # Test amaçlı küçük bir çağrı yap
-            m.generate_content("test")
-            return m
-        except:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt_text)
+            return response.text
+        except Exception:
             continue
     return None
-
-model = get_model()
 
 # --- 7. ARAYÜZ ---
 st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
@@ -128,20 +124,16 @@ if st.session_state.analiz_edildi:
     for i, kn in enumerate(secilen_kartlar):
         with cols[i]: st.markdown(f"<div style='text-align:center; padding:20px; border:1px solid #333; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
             
-    if model is None:
-        st.error("Google API ile bağlantı kurulamadı. Lütfen API anahtarını kontrol edin.")
-    else:
-        with st.spinner("..."):
-            try:
-                prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
-                response = model.generate_content(prompt)
-                report_text = response.text
-                st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
-                
-                pdf_data = create_pdf(report_text, st.session_state.lang)
-                st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
-            except Exception as e:
-                st.error(f"Beklenmedik bir hata: {str(e)[:50]}")
+    with st.spinner("..."):
+        full_prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
+        report_text = generate_ai_response(full_prompt)
+        
+        if report_text:
+            st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
+            pdf_data = create_pdf(report_text, st.session_state.lang)
+            st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
+        else:
+            st.error("Google API uyarısı nedeniyle analiz yapılamadı. Lütfen API anahtarınızı AI Studio'dan kontrol edin.")
     
     if st.button(L["btn_reset"]):
         st.session_state.secilen_indeksler = []
