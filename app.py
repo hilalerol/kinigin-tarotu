@@ -3,149 +3,89 @@ import google.generativeai as genai
 import random
 import time
 
-# --- 1. AYARLAR ---
+# --- 1. AYARLAR VE TASARIM ---
 st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
 
-# --- 2. TASARIM (CSS BURADA DOĞRU ŞEKİLDE PAKETLENDİ) ---
+# CSS tasarımını tek bir blokta, güvenli bir şekilde ekliyoruz
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
-    /* Arka Plan */
-    .stApp { 
-        background: radial-gradient(circle, #1a1a1a 0%, #000000 100%); 
-        color: #e0e0e0; 
-        font-family: 'Special Elite', cursive; 
-    }
+    .stApp { background: #000; color: #e0e0e0; font-family: 'Special Elite', cursive; }
+    .main-title { font-family: 'Cinzel', serif; text-align: center; color: white; letter-spacing: 8px; text-shadow: 0 0 15px #ff4b4b; }
     
-    /* Başlık */
-    .main-title { 
-        font-family: 'Cinzel', serif; 
-        text-align: center; 
-        color: #ffffff; 
-        letter-spacing: 12px; 
-        text-shadow: 0 0 15px #ff4b4b; 
-        margin-top: 20px; 
-    }
-    
-    /* Kart Butonları */
+    /* Butonlar */
     .stButton button { 
-        background: rgba(15, 15, 15, 0.9) !important; 
-        border: 1px solid #333 !important; 
-        color: #ff4b4b !important; 
-        border-radius: 8px !important; 
-        font-size: 22px !important; 
-        height: 60px !important; 
-        transition: all 0.4s ease-in-out !important; 
+        background: #111 !important; border: 1px solid #333 !important; 
+        color: #ff4b4b !important; border-radius: 8px !important; 
+        transition: 0.3s; width: 100%;
     }
-    .stButton button:hover { 
-        border-color: #ff4b4b !important; 
-        color: white !important; 
-        box-shadow: 0 0 20px #ff4b4b !important; 
-        transform: scale(1.15) rotate(2deg); 
-    }
+    .stButton button:hover { border-color: #ff4b4b !important; box-shadow: 0 0 15px #ff4b4b; transform: scale(1.1); }
     
-    /* Analiz Rapor Kutusu */
-    .report-box { 
-        background: rgba(5, 5, 5, 0.95); 
-        padding: 35px; 
-        border: 1px solid #444; 
-        border-left: 5px solid #ff4b4b; 
-        border-radius: 20px; 
-        line-height: 2; 
-        color: #d1d1d1; 
-        box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
-        margin-top: 25px; 
-    }
+    /* Analiz Kutusu */
+    .report-box { background: #0a0a0a; padding: 25px; border-left: 5px solid #ff4b4b; border-radius: 15px; line-height: 1.8; color: #ddd; }
     
-    /* Profesör Animasyonu */
-    .mystic-prof { 
-        text-align: center; 
-        font-size: 100px; 
-        animation: float 4s ease-in-out infinite; 
-        filter: drop-shadow(0 0 20px #ff4b4b); 
-        margin-bottom: -20px; 
-    }
-    @keyframes float { 
-        0% { transform: translateY(0px); } 
-        50% { transform: translateY(-25px); } 
-        100% { transform: translateY(0px); } 
-    }
-    
-    /* Input Alanı */
-    .stTextInput input { 
-        background-color: #0a0a0a !important; 
-        color: #ff4b4b !important; 
-        border: 1px solid #444 !important; 
-        text-align: center; 
-        border-radius: 10px !important; 
-        padding: 15px !important; 
-    }
+    /* Profesör */
+    .mystic-prof { text-align: center; font-size: 80px; animation: float 3s infinite ease-in-out; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. API BAĞLANTISI ---
-# Not: MY_API_KEY Streamlit Secrets panelinden ayarlanmış olmalı
+# --- 2. API BAĞLANTISI ---
 genai.configure(api_key=st.secrets["MY_API_KEY"])
 
-def get_best_model():
+def get_model():
     try:
         models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for target in ['models/gemini-1.5-flash', 'models/gemini-pro']:
-            if target in models: return genai.GenerativeModel(target)
-        return genai.GenerativeModel(models[0]) if models else None
+        for m in ['models/gemini-1.5-flash', 'models/gemini-pro']:
+            if m in models: return genai.GenerativeModel(m)
+        return genai.GenerativeModel(models[0])
     except: return None
 
-# --- 4. SESSION STATE ---
-if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
-if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
+# --- 3. DURUM YÖNETİMİ ---
+if 'secilenler' not in st.session_state: st.session_state.secilenler = []
+if 'analiz' not in st.session_state: st.session_state.analiz = False
 
-# --- 5. ARAYÜZ ---
+# --- 4. ARAYÜZ ---
 st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
 st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=True)
 
 soru = st.text_input("", placeholder="Kehanetini öğrenmek için 3 kart seç", label_visibility="collapsed")
 
-if not st.session_state.analiz_edildi:
+# KART SEÇİMİ
+if not st.session_state.analiz:
+    st.write(f"<p style='text-align:center;'>Seçilen: {len(st.session_state.secilenler)} / 3</p>", unsafe_allow_html=True)
     cols = st.columns(13)
     for i in range(78):
         with cols[i % 13]:
-            label = "❂" if i in st.session_state.secilen_indeksler else "✧"
-            if st.button(label, key=f"btn_{i}"):
-                if i not in st.session_state.secilen_indeksler and len(st.session_state.secilen_indeksler) < 3:
-                    st.session_state.secilen_indeksler.append(i)
+            label = "❂" if i in st.session_state.secilenler else "✧"
+            if st.button(label, key=f"b{i}"):
+                if i not in st.session_state.secilenler and len(st.session_state.secilenler) < 3:
+                    st.session_state.secilenler.append(i)
                     st.rerun()
-                elif i in st.session_state.secilen_indeksler:
-                    st.session_state.secilen_indeksler.remove(i)
+                elif i in st.session_state.secilenler:
+                    st.session_state.secilenler.remove(i)
                     st.rerun()
 
-    if len(st.session_state.secilen_indeksler) == 3:
+    if len(st.session_state.secilenler) == 3:
         if st.button("KEHANETİ AÇ", use_container_width=True):
-            st.session_state.analiz_edildi = True
+            st.session_state.analiz = True
             st.rerun()
 
-if st.session_state.analiz_edildi:
-    placeholder = st.empty()
-    placeholder.markdown("<h3 style='text-align:center; color:#ff4b4b;'>🔮 Profesör Minerva enerjiyi topluyor...</h3>", unsafe_allow_html=True)
-    time.sleep(2)
-    placeholder.empty()
-
+# ANALİZ GÖSTERİMİ
+if st.session_state.analiz:
     TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     
-    with st.spinner("Kehanet işleniyor..."):
-        model = get_best_model()
+    with st.spinner("Kehanet fısıldanıyor..."):
+        model = get_model()
         if model:
             try:
-                prompt = f"Sen 'The Cynic's Tarot' sistemisin. Sert ve dürüst bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}."
-                response = model.generate_content(prompt)
-                st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
+                res = model.generate_content(f"Sert bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}")
+                st.markdown(f"<div class='report-box'>{res.text}</div>", unsafe_allow_html=True)
             except Exception as e:
-                if "429" in str(e):
-                    st.warning("🌙 Yıldızlar yoğun. 30 saniye sonra tekrar dene.")
-                else:
-                    st.error(f"Hata: {e}")
+                st.error("Kozmik bir yoğunluk var, lütfen biraz bekleyip tekrar dene.")
 
     if st.button("YENİDEN BAŞLA"):
-        st.session_state.secilen_indeksler = []
-        st.session_state.analiz_edildi = False
+        st.session_state.secilenler = []
+        st.session_state.analiz = False
         st.rerun()
