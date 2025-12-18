@@ -59,8 +59,8 @@ if 'sepet' not in st.session_state: st.session_state.sepet = []
 # --- 3. MAİL MOTORU ---
 def mail_at(alici, soru, analiz):
     try:
-        sender = st.secrets["MY_EMAIL"]
-        pwd = st.secrets["MY_EMAIL_PASSWORD"]
+        sender = st.secrets["hilalerol1041@gmail.com"]
+        pwd = st.secrets["vbvf gpkc jmmx priq"]
         msg = MIMEMultipart()
         msg['From'] = f"Profesör Minerva <{sender}>"
         msg['To'] = alici
