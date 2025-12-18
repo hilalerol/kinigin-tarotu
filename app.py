@@ -62,14 +62,30 @@ st.markdown("""
 def create_pdf(text, language):
     pdf = FPDF()
     pdf.add_page()
+    # Unicode desteklemediği için standart fontu kullanıyoruz
     pdf.set_font("Arial", 'B', 16)
-    title = "KİNİĞİN TAROTU - RİSK RAPORU" if language == "Türkçe" else "THE CYNIC'S TAROT - RISK REPORT"
+    
+    title = "KINIGIN TAROTU - RISK RAPORU" if language == "Türkçe" else "THE CYNIC'S TAROT - RISK REPORT"
     pdf.cell(190, 10, title, ln=True, align='C')
     pdf.ln(10)
+    
     pdf.set_font("Arial", size=12)
-    # Karakter hatasını önlemek için basitleştirme
-    clean_text = text.encode('latin-1', 'ignore').decode('latin-1')
-    pdf.multi_cell(0, 10, clean_text)
+    
+    # TÜRKÇE KARAKTER DÜZELTME TABLOSU
+    # Latin-1 uyumlu hale getiriyoruz
+    tr_map = {
+        "ş": "s", "Ş": "S", "ı": "i", "İ": "I", "ğ": "g", "Ğ": "G", 
+        "ü": "u", "Ü": "U", "ö": "o", "Ö": "O", "ç": "c", "Ç": "C"
+    }
+    
+    clean_text = text
+    for tr_char, en_char in tr_map.items():
+        clean_text = clean_text.replace(tr_char, en_char)
+    
+    # Latin-1'e güvenli çeviri
+    safe_text = clean_text.encode('latin-1', 'ignore').decode('latin-1')
+    
+    pdf.multi_cell(0, 10, safe_text)
     return pdf.output(dest="S")
 
 # --- 5. API VE MODEL ---
