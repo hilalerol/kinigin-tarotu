@@ -62,34 +62,36 @@ st.markdown("""
 def create_pdf(text, language):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15) # Sayfa sonuna gelince yeni sayfaya geç
+    pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Başlık Kısmı
+    # Başlık
     pdf.set_font("Arial", 'B', 16)
     title = "KINIGIN TAROTU - RISK RAPORU" if language == "Türkçe" else "THE CYNIC'S TAROT - RISK REPORT"
     pdf.cell(190, 10, title, ln=True, align='C')
     pdf.ln(10)
     
-    # İçerik Kısmı
+    # İçerik Fontu
     pdf.set_font("Arial", size=12)
     
-    # Karakter Düzeltme
+    # GELİŞMİŞ TEMİZLİK TABLOSU
     tr_map = {
         "ş": "s", "Ş": "S", "ı": "i", "İ": "I", "ğ": "g", "Ğ": "G", 
         "ü": "u", "Ü": "U", "ö": "o", "Ö": "O", "ç": "c", "Ç": "C",
-        "*": "", "#": "" # Markdown işaretlerini temizle
+        "\u2013": "-", "\u2014": "-", "\u2019": "'", "\u201d": '"', 
+        "\u201c": '"', "*": "", "#": ""
     }
     
     clean_text = text
-    for tr_char, en_char in tr_map.items():
-        clean_text = clean_text.replace(tr_char, en_char)
+    for char, replacement in tr_map.items():
+        clean_text = clean_text.replace(char, replacement)
     
-    # Satır satır yazdır (Boş çıkmaması için en güvenli yol)
-    pdf.multi_cell(0, 10, clean_text)
+    # Latin-1 dışında kalan her şeyi tamamen kazıyalım (Kesin Çözüm)
+    safe_text = clean_text.encode('ascii', 'ignore').decode('ascii')
     
-    # Veriyi döndürürken 'bytes' tipinde olduğundan emin olalım
+    pdf.multi_cell(0, 10, safe_text)
+    
+    # Çıktıyı al ve bytes olarak döndür
     return pdf.output(dest="S").encode('latin-1')
-
 # --- 5. API VE MODEL ---
 genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
 
