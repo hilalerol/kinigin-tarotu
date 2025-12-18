@@ -75,8 +75,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # --- 6. API VE MODEL (HATA KORUMALI) ---
-# SADECE BU KISMI GÜNCELLEMEN YETERLİ
-genai.configure(api_key="AIzaSyC8knFCnlZI1EKpZnwmbNexMEH1fKPPMmk")
+genai.configure(api_key=st.secrets["AIzaSyC8knFCnlZI1EKpZnwmbNexMEH1fKPPMmk"])
 model = genai.GenerativeModel('gemini-pro') # En kararlı model budur
 
 def generate_ai_response(prompt_text):
