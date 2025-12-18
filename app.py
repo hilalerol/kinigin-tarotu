@@ -3,60 +3,114 @@ import google.generativeai as genai
 import random
 import time
 
-# --- 1. AYARLAR ---
-st.set_page_config(page_title="Kinigin Tarotu Pro", page_icon="🔮", layout="wide")
+# --- 1. SAYFA VE FONT AYARLARI ---
+st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
 
-# --- 2. DESTE ---
-TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
-
-# --- 3. DURUM YÖNETİMİ ---
-if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
-if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
-
-# --- 4. TASARIM ---
+# Google Fonts'tan mistik fontları çekiyoruz
 st.markdown("""
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
-    .stApp { background-color: #000; color: #fff; }
-    .report-box { background: #0a0a0a; padding: 25px; border-left: 5px solid #ff4b4b; border-radius: 10px; line-height: 1.8; color: #ddd; font-family: serif; }
-    .stButton button { background: #111 !important; border: 1px solid #333 !important; color: #888 !important; width: 100%; border-radius: 8px; }
-    .stButton button:hover { border-color: #ff4b4b !important; color: #fff !important; }
-    .prof-header { text-align: center; font-size: 80px; text-shadow: 0 0 20px #ff4b4b; margin-top: 20px; }
+    /* Genel Arka Plan ve Yazı Tipleri */
+    .stApp {
+        background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
+        color: #e0e0e0;
+        font-family: 'Special Elite', cursive;
+    }
+    
+    /* Başlık Stili */
+    .main-title {
+        font-family: 'Cinzel', serif;
+        text-align: center;
+        color: #ffffff;
+        letter-spacing: 10px;
+        text-shadow: 0 0 20px #ff4b4b, 0 0 30px #000;
+        margin-top: 20px;
+        font-weight: 700;
+    }
+
+    /* Kart Butonları Efekti */
+    .stButton button {
+        background: rgba(20, 20, 20, 0.8) !important;
+        border: 1px solid #333 !important;
+        color: #ff4b4b !important;
+        border-radius: 5px !important;
+        font-size: 20px !important;
+        transition: all 0.4s ease-in-out !important;
+    }
+    
+    .stButton button:hover {
+        border-color: #ff4b4b !important;
+        color: white !important;
+        box-shadow: 0 0 15px #ff4b4b !important;
+        transform: scale(1.1);
+    }
+
+    /* Analiz Rapor Kutusu */
+    .report-box {
+        background: rgba(10, 10, 10, 0.9);
+        padding: 30px;
+        border: 1px solid #444;
+        border-left: 4px solid #ff4b4b;
+        border-radius: 15px;
+        line-height: 2;
+        color: #d1d1d1;
+        font-family: 'Special Elite', cursive;
+        box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+    }
+
+    /* Profesör Emoji Animasyonu */
+    .mystic-prof {
+        text-align: center;
+        font-size: 90px;
+        animation: float 3s ease-in-out infinite;
+        filter: drop-shadow(0 0 15px #ff4b4b);
+    }
+
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+        100% { transform: translateY(0px); }
+    }
+    
+    /* Input Alanı */
+    .stTextInput input {
+        background-color: #111 !important;
+        color: white !important;
+        border: 1px solid #333 !important;
+        font-family: 'Special Elite', cursive !important;
+        text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5. API VE OTOMATİK MODEL BULUCU ---
+# --- 2. API VE MODEL ---
 try:
     genai.configure(api_key=st.secrets["MY_API_KEY"])
 except:
-    st.error("Secrets panelinden MY_API_KEY tanımlanmamış!")
+    st.error("API Anahtarı eksik!")
 
-def get_any_working_model():
-    """Hangi model ismi geçerliyse onu otomatik bulur (404 hatasını bitirir)"""
+def get_actual_model():
     try:
-        # Google'a 'Hangi modelleri kullanabilirim?' diye soruyoruz
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        
-        # Öncelik sırası: Flash -> Pro -> Herhangi biri
-        for target in ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']:
-            if target in available_models:
-                return genai.GenerativeModel(target)
-        
-        # Eğer yukarıdakiler yoksa listedeki ilk modeli ver
-        if available_models:
-            return genai.GenerativeModel(available_models[0])
-        return None
-    except Exception as e:
-        st.error(f"Modellere ulaşılamıyor: {e}")
-        return None
+        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        for target in ['models/gemini-1.5-flash', 'models/gemini-pro']:
+            if target in models: return genai.GenerativeModel(target)
+        return genai.GenerativeModel(models[0]) if models else None
+    except: return None
 
-# --- 6. ARAYÜZ ---
-st.markdown('<div class="prof-header">🧙‍♀️</div>', unsafe_allow_html=True)
-st.markdown("<h1 style='text-align:center;'>KİNİĞİN TAROTU</h1>", unsafe_allow_html=True)
+# --- 3. İÇERİK ---
+st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=True)
 
-soru = st.text_input("", placeholder="Senaryonu fısılda...", label_visibility="collapsed")
+soru = st.text_input("", placeholder="Kehanetini öğrenmek için 3 kart seç", label_visibility="collapsed")
 
+# Session State
+if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
+if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
+
+# Kart Seçimi
 if not st.session_state.analiz_edildi:
-    st.write(f"<p style='text-align:center; color:#555;'>{len(st.session_state.secilen_indeksler)} / 3</p>", unsafe_allow_html=True)
+    st.write(f"<p style='text-align:center; color:#666;'>Kaderin mühürleniyor: {len(st.session_state.secilen_indeksler)} / 3</p>", unsafe_allow_html=True)
+    
     cols = st.columns(13)
     for i in range(78):
         with cols[i % 13]:
@@ -74,21 +128,27 @@ if not st.session_state.analiz_edildi:
             st.session_state.analiz_edildi = True
             st.rerun()
 
+# Analiz Sonucu
 if st.session_state.analiz_edildi:
+    placeholder = st.empty()
+    placeholder.markdown("<h3 style='text-align:center; color:#ff4b4b; font-family:Cinzel;'>🔮 Profesör Minerva enerjiyi topluyor...</h3>", unsafe_allow_html=True)
+    time.sleep(2)
+    placeholder.empty()
+
+    TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
     secilen_kartlar = random.sample(TAM_DESTE, 3)
-    st.divider()
     
-    with st.spinner("🔮 Profesör Minerva kozmik bağ kuruyor..."):
-        model = get_any_working_model()
+    st.markdown(f"<p style='text-align:center; font-size:20px; color:#aaa;'>Seçilen Kartlar: {', '.join(secilen_kartlar)}</p>", unsafe_allow_html=True)
+    
+    with st.spinner("Analiz hazırlanıyor..."):
+        model = get_actual_model()
         if model:
             try:
-                prompt = f"Sen sert bir ekonomi analistisin. Soru: {soru}. Kartlar: {secilen_kartlar}. Acımasızca analiz et."
+                prompt = f"Sen 'The Cynic's Tarot' isimli sert ve stratejik bir analiz sistemisin. Soru: {soru}. Kartlar: {secilen_kartlar}. Acımasızca analiz et."
                 response = model.generate_content(prompt)
                 st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"Analiz sırasında hata (Kota veya Bağlantı): {e}")
-        else:
-            st.error("Üzgünüm, şu an hiçbir yapay zeka modeli yanıt vermiyor.")
+                st.error(f"Hata: {e}")
 
     if st.button("YENİDEN BAŞLA"):
         st.session_state.secilen_indeksler = []
