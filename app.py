@@ -3,15 +3,15 @@ import google.generativeai as genai
 import random
 from fpdf import FPDF
 
-# --- 1. SAYFA AYARLARI ---
-st.set_page_config(page_title="The Cynic's Tarot Pro", page_icon="🔮", layout="wide")
+# --- 1. AYARLAR ---
+st.set_page_config(page_title="Kiniğin Tarotu Pro", page_icon="🔮", layout="wide")
 
-# --- 2. 78 KARTLIK TAM DESTE ---
+# --- 2. DESTE TANIMI (78 KART) ---
 BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant", "The Lovers", "The Chariot", "Strength", "The Hermit", "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"]
 KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
 
-# --- 3. SESSION STATE ---
+# --- 3. DURUM YÖNETİMİ ---
 if 'lang' not in st.session_state: st.session_state.lang = "Türkçe"
 if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
 if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
@@ -20,73 +20,72 @@ texts = {
     "Türkçe": {
         "title": "KİNİĞİN TAROTU",
         "sub": "78 Kartlık Desteden 3 Sembol Seç...",
-        "placeholder": "Senaryonu buraya fısılda...",
+        "placeholder": "Analiz edilecek senaryoyu yazın...",
         "btn_reveal": "KEHANETİ AÇ",
         "btn_reset": "YENİDEN BAŞLA",
         "pdf_btn": "📄 Analizi PDF Olarak İndir",
-        "prompt": "Sen sert bir ekonomi analistisin. Soruya dürüst, stratejik ve acımasız bir analiz yap."
+        "prompt": "Sen sert bir ekonomi analistisin. Seçilen tarot kartlarını kullanarak dürüst ve acımasız bir risk analizi yaz."
     },
     "English": {
         "title": "THE CYNIC'S TAROT",
         "sub": "Select 3 Symbols from the 78-Card Deck...",
-        "placeholder": "Whisper your scenario here...",
+        "placeholder": "Enter your scenario here...",
         "btn_reveal": "REVEAL DESTINY",
         "btn_reset": "RESTART",
         "pdf_btn": "📄 Download Analysis as PDF",
-        "prompt": "You are a harsh economic analyst. Provide a strategic, honest, and ruthless analysis for the question."
+        "prompt": "You are a harsh economic analyst. Provide an honest and ruthless risk analysis based on the selected cards."
     }
 }
 
 with st.sidebar:
-    st.title("🌐 Language")
+    st.title("🌐 Language / Dil")
     st.session_state.lang = st.radio("", ["Türkçe", "English"])
     st.divider()
-    st.caption("Dev: Hilal Erol | v12.5 Platinum")
+    st.caption("Geliştirici: Hilal Erol | v13.0")
 
 L = texts[st.session_state.lang]
 
-# --- 4. PDF FONKSİYONU ---
+# --- 4. PDF OLUŞTURUCU ---
 def create_pdf(text, lang):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
-    title = "KINIGIN TAROTU - RAPOR" if lang == "Türkçe" else "THE CYNIC'S TAROT - REPORT"
-    pdf.cell(190, 10, title, ln=True, align='C')
+    pdf.cell(190, 10, "KINIGIN TAROTU RAPORU", ln=True, align='C')
     pdf.ln(10)
-    pdf.set_font("Arial", size=12)
+    pdf.set_font("Arial", size=11)
     
-    tr_map = {"ş":"s","Ş":"S","ı":"i","İ":"I","ğ":"g","Ğ":"G","ü":"u","Ü":"U","ö":"o","Ö":"O","ç":"c","Ç":"C","\u2013":"-","*":"","#":""}
-    clean_text = text
-    for c, r in tr_map.items(): clean_text = clean_text.replace(c, r)
-    safe_text = clean_text.encode('ascii', 'ignore').decode('ascii')
+    # Türkçe karakter temizliği
+    tr_chars = {"ş":"s","Ş":"S","ı":"i","İ":"I","ğ":"g","Ğ":"G","ü":"u","Ü":"U","ö":"o","Ö":"O","ç":"c","Ç":"C"}
+    for k, v in tr_chars.items(): text = text.replace(k, v)
+    safe_text = text.encode('ascii', 'ignore').decode('ascii')
     
-    pdf.multi_cell(0, 10, safe_text)
+    pdf.multi_cell(0, 8, safe_text)
     return pdf.output(dest="S").encode('latin-1')
 
-# --- 5. CSS (TASARIM) ---
+# --- 5. TASARIM (CSS) ---
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #000000; color: #ffffff; }}
-    .main-title {{ font-family: serif; text-align: center; letter-spacing: 8px; color: #ffffff; padding-top: 20px; }}
-    .stButton button {{ background-color: #0a0a0a !important; border: 1px solid #333 !important; color: #666 !important; font-size: 16px !important; width: 100% !important; height: 50px; }}
-    .stButton button:hover {{ border-color: #ff4b4b !important; color: white !important; }}
-    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border: 1px solid #222; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; line-height: 1.8; }}
+    .main-title {{ font-family: serif; text-align: center; letter-spacing: 7px; color: #ffffff; padding-top: 10px; }}
+    .stButton button {{ background-color: #0e0e0e !important; border: 1px solid #333 !important; color: #666 !important; font-size: 16px !important; height: 55px; width: 100%; transition: 0.3s; }}
+    .stButton button:hover {{ border-color: #ff4b4b !important; color: #fff !important; }}
+    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 12px; border-left: 5px solid #ff4b4b; border-right: 1px solid #222; color: #d0d0d0; line-height: 1.7; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API YAPILANDIRMASI ---
+# --- 6. API BAĞLANTISI ---
 try:
     genai.configure(api_key=st.secrets["MY_API_KEY"])
-except:
-    st.error("Secrets ayarı eksik! Lütfen MY_API_KEY tanımlayın.")
+except Exception:
+    st.warning("⚠️ Secrets panelinden MY_API_KEY tanımlanmamış!")
 
 # --- 7. ARAYÜZ ---
 st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
-st.write(f"<p style='text-align:center; color:#444;'>{L['sub']}</p>", unsafe_allow_html=True)
+st.write(f"<p style='text-align:center; color:#555;'>{L['sub']}</p>", unsafe_allow_html=True)
 
 soru = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
 
-# KART MATRİSİ
+# KART SEÇİM MATRİSİ
 if not st.session_state.analiz_edildi:
     st.write(f"### ✧ {len(st.session_state.secilen_indeksler)} / 3")
     for row in range(6):
@@ -95,50 +94,54 @@ if not st.session_state.analiz_edildi:
             idx = row * 13 + col
             if idx < 78:
                 with cols[col]:
-                    label = "❂" if idx in st.session_state.secilen_indeksler else "✧"
+                    is_sel = idx in st.session_state.secilen_indeksler
+                    label = "❂" if is_sel else "✧"
                     if st.button(label, key=f"k_{idx}"):
-                        if idx not in st.session_state.secilen_indeksler and len(st.session_state.secilen_indeksler) < 3:
+                        if not is_sel and len(st.session_state.secilen_indeksler) < 3:
                             st.session_state.secilen_indeksler.append(idx)
                             st.rerun()
-                        elif idx in st.session_state.secilen_indeksler:
+                        elif is_sel:
                             st.session_state.secilen_indeksler.remove(idx)
                             st.rerun()
 
-if len(st.session_state.secilen_indeksler) == 3 and not st.session_state.analiz_edildi:
-    if st.button(L["btn_reveal"], use_container_width=True):
-        st.session_state.analiz_edildi = True
-        st.rerun()
+    if len(st.session_state.secilen_indeksler) == 3:
+        if st.button(L["btn_reveal"], use_container_width=True):
+            st.session_state.analiz_edildi = True
+            st.rerun()
 
-# SONUÇ EKRANI
+# ANALİZ SONUCU
 if st.session_state.analiz_edildi:
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     st.divider()
-    cols = st.columns(3)
+    c1, c2, c3 = st.columns(3)
+    k_list = [c1, c2, c3]
     for i, kn in enumerate(secilen_kartlar):
-        with cols[i]: st.markdown(f"<div style='text-align:center; padding:20px; border:1px solid #333; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
+        with k_list[i]: 
+            st.markdown(f"<div style='text-align:center; padding:15px; border:1px solid #222; border-radius:10px; color:#aaa;'>{kn}</div>", unsafe_allow_html=True)
             
-    with st.spinner("..."):
-        full_prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
+    with st.spinner("Kınik analiz ediyor..."):
         try:
-            # Otomatik model seçimi (Hangi model aktifse onu kullanır)
-            model_names = ['gemini-1.5-flash', 'gemini-pro']
-            response = None
-            for m_name in model_names:
+            # Otomatik model kurtarma döngüsü
+            model = None
+            for m_name in ['gemini-1.5-flash', 'gemini-pro']:
                 try:
-                    model = genai.GenerativeModel(m_name)
-                    response = model.generate_content(full_prompt)
-                    if response: break
+                    m = genai.GenerativeModel(m_name)
+                    model = m
+                    break
                 except: continue
             
-            if response:
+            if model:
+                prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
+                response = model.generate_content(prompt)
                 st.markdown(f'<div class="report-box">{response.text}</div>', unsafe_allow_html=True)
-                pdf_data = create_pdf(response.text, st.session_state.lang)
-                st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
+                
+                pdf_val = create_pdf(response.text, st.session_state.lang)
+                st.download_button(L["pdf_btn"], data=pdf_val, file_name="Tarot_Report.pdf", mime="application/pdf")
             else:
-                st.error("Google API yanıt vermiyor. Lütfen yeni bir API anahtarı ile Secrets kısmını güncelleyin.")
+                st.error("Model yüklenemedi. Lütfen API anahtarınızı yenileyin.")
         except Exception as e:
-            st.error(f"Sistemsel Hata: {str(e)}")
-    
+            st.error(f"Bağlantı Hatası: {str(e)}")
+            
     if st.button(L["btn_reset"]):
         st.session_state.secilen_indeksler = []
         st.session_state.analiz_edildi = False
