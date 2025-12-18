@@ -2,98 +2,56 @@ import streamlit as st
 import google.generativeai as genai
 import random
 import time
-from fpdf import FPDF
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Kiniğin Tarotu", page_icon="🔮", layout="wide")
 
 # --- 2. DESTE ---
-BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant", "The Lovers", "The Chariot", "Strength", "The Hermit", "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"]
-KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
-TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
+TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 
 # --- 3. SESSION STATE ---
-if 'lang' not in st.session_state: st.session_state.lang = "Türkçe"
 if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
 if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
 
-texts = {
-    "Türkçe": {
-        "title": "KİNİĞİN TAROTU",
-        "sub": "78 Kartlık Desteden 3 Sembol Seç...",
-        "placeholder": "Analiz edilecek senaryoyu yazın...",
-        "btn_reveal": "KEHANETİ AÇ",
-        "btn_reset": "YENİDEN BAŞLA",
-        "pdf_btn": "📄 Analizi İndir",
-        "loading": "Profesör verileri büyülüyor...",
-        "prompt": "Sen sert bir ekonomi analistisin. Seçilen tarot kartlarını kullanarak dürüst ve acımasız bir risk analizi yaz."
-    },
-    "English": {
-        "title": "THE CYNIC'S TAROT",
-        "sub": "Select 3 Symbols from the 78-Card Deck...",
-        "placeholder": "Enter your scenario...",
-        "btn_reveal": "REVEAL DESTINY",
-        "btn_reset": "RESTART",
-        "pdf_btn": "📄 Download Report",
-        "loading": "Professor is enchanting the data...",
-        "prompt": "You are a harsh economic analyst. Provide an honest and ruthless risk analysis based on the cards."
-    }
-}
-L = texts[st.session_state.lang]
-
-# --- 4. PDF FONKSİYONU ---
-def create_pdf(text):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(190, 10, "KINIGIN TAROTU RAPORU", ln=True, align='C')
-    pdf.ln(10)
-    pdf.set_font("Arial", size=11)
-    tr_map = {"ş":"s","Ş":"S","ı":"i","İ":"I","ğ":"g","Ğ":"G","ü":"u","Ü":"U","ö":"o","Ö":"O","ç":"c","Ç":"C"}
-    for k, v in tr_map.items(): text = text.replace(k, v)
-    safe_text = text.encode('ascii', 'ignore').decode('ascii')
-    pdf.multi_cell(0, 8, safe_text)
-    return pdf.output(dest="S").encode('latin-1')
-
-# --- 5. TASARIM (CSS) ---
+# --- 4. TASARIM (CSS) ---
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #fff; }
-    .main-title { font-family: serif; text-align: center; letter-spacing: 7px; color: #fff; margin-bottom: 0; }
-    .stButton button { background: #111 !important; border: 1px solid #333 !important; color: #888 !important; width: 100%; height: 50px; border-radius: 10px; }
-    .stButton button:hover { border-color: #ff4b4b !important; color: #fff !important; }
     .report-box { background: #0a0a0a; padding: 25px; border-left: 5px solid #ff4b4b; border-radius: 10px; line-height: 1.8; color: #ddd; font-family: serif; }
-    .witch-img { display: block; margin: 0 auto; width: 180px; filter: drop-shadow(0 0 10px #ff4b4b); }
+    .witch-img { display: block; margin: 0 auto; width: 150px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API VE DİNAMİK MODEL BULUCU ---
-genai.configure(api_key=st.secrets["MY_API_KEY"])
+# --- 5. API VE MODEL TESPİTİ (KRİTİK BÖLÜM) ---
+try:
+    genai.configure(api_key=st.secrets["MY_API_KEY"])
+except:
+    st.error("Secrets panelinden MY_API_KEY tanımlanmamış!")
 
-def get_best_model():
+def force_get_any_model():
+    """Hata almamak için izin verilen İLK modeli bulur"""
     try:
-        # Google'a "sende hangi modeller var?" diye soruyoruz
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Öncelik sırası: Flash 1.5 -> Pro 1.5 -> Eski Pro
-        for target in ['models/gemini-1.5-flash', 'gemini-1.5-flash', 'models/gemini-pro', 'gemini-pro']:
-            if target in available_models:
-                return genai.GenerativeModel(target)
-        return genai.GenerativeModel(available_models[0]) if available_models else None
-    except:
+        # İzin verilen tüm modelleri çek
+        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        if not models:
+            return None
+        # En yeni modellerden birini seçmeye çalış, yoksa ilkini al
+        for preferred in ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']:
+            if preferred in models:
+                return genai.GenerativeModel(preferred)
+        return genai.GenerativeModel(models[0])
+    except Exception as e:
+        st.error(f"Model Listesi Alınamadı: {e}")
         return None
 
-# --- 7. ARAYÜZ ---
-with st.sidebar:
-    st.session_state.lang = st.radio("Dil / Language", ["Türkçe", "English"])
-    st.divider()
-    st.caption("Hilal Erol | v19.0")
+# --- 6. ARAYÜZ ---
+st.markdown('<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZhcWp2bXB4cWN4am14am14am14am14am14am14am14am14amImZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PXM/U6X9A55X765vP3YvP3/giphy.gif" class="witch-img">', unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>KİNİĞİN TAROTU</h1>", unsafe_allow_html=True)
 
-st.markdown(f'<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZhcWp2bXB4cWN4am14am14am14am14am14am14am14am14amImZXA9djFfaW50ZXJuYWxfZ2lmX2J5X2lkJmN0PXM/U6X9A55X765vP3YvP3/giphy.gif" class="witch-img">', unsafe_allow_html=True)
-st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
-
-soru = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
+soru = st.text_input("Senaryonu fısılda...", label_visibility="collapsed")
 
 if not st.session_state.analiz_edildi:
+    st.write(f"<p style='text-align:center;'>{len(st.session_state.secilen_indeksler)} / 3</p>", unsafe_allow_html=True)
     cols = st.columns(13)
     for i in range(78):
         with cols[i % 13]:
@@ -107,37 +65,27 @@ if not st.session_state.analiz_edildi:
                     st.rerun()
 
     if len(st.session_state.secilen_indeksler) == 3:
-        if st.button(L["btn_reveal"], use_container_width=True):
+        if st.button("KEHANETİ AÇ", use_container_width=True):
             st.session_state.analiz_edildi = True
             st.rerun()
 
 if st.session_state.analiz_edildi:
-    placeholder = st.empty()
-    with placeholder.container():
-        st.markdown(f"<h3 style='text-align:center; color:#ff4b4b;'>{L['loading']}</h3>", unsafe_allow_html=True)
-        time.sleep(2.5)
-    placeholder.empty()
-
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     st.divider()
-    cols = st.columns(3)
-    for i, kn in enumerate(secilen_kartlar):
-        with cols[i]: st.markdown(f"<div style='text-align:center; padding:15px; border:1px solid #222; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
     
-    with st.spinner("..."):
-        model = get_best_model()
+    with st.spinner("Kınik analiz ediyor..."):
+        model = force_get_any_model()
         if model:
             try:
-                response = model.generate_content(f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}.")
+                # Modeli ve adını kontrol et
+                response = model.generate_content(f"Sert bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}")
                 st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
-                pdf_val = create_pdf(response.text)
-                st.download_button(L["pdf_btn"], data=pdf_val, file_name="Kinigin_Tarotu.pdf", mime="application/pdf")
             except Exception as e:
-                st.error(f"Hata: {e}")
+                st.error(f"Analiz Hatası: {e}")
         else:
-            st.error("Google API ile bağlantı kurulamadı.")
+            st.error("Google hesabınızda henüz aktif bir model bulunamadı.")
 
-    if st.button(L["btn_reset"]):
+    if st.button("YENİDEN BAŞLA"):
         st.session_state.secilen_indeksler = []
         st.session_state.analiz_edildi = False
         st.rerun()
