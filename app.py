@@ -6,30 +6,80 @@ import time
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
 
-# --- 2. CSS TASARIMI (Burada hata vardı, düzelttim) ---
+# --- 2. TASARIM (CSS BURADA OLMALI) ---
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
-    .stApp { background: radial-gradient(circle, #1a1a1a 0%, #000000 100%); color: #e0e0e0; font-family: 'Special Elite', cursive; }
-    .main-title { font-family: 'Cinzel', serif; text-align: center; color: #ffffff; letter-spacing: 12px; text-shadow: 0 0 15px #ff4b4b; margin-top: 20px; }
+    /* Arka Plan */
+    .stApp { 
+        background: radial-gradient(circle, #1a1a1a 0%, #000000 100%); 
+        color: #e0e0e0; 
+        font-family: 'Special Elite', cursive; 
+    }
+    
+    /* Başlık */
+    .main-title { 
+        font-family: 'Cinzel', serif; 
+        text-align: center; 
+        color: #ffffff; 
+        letter-spacing: 12px; 
+        text-shadow: 0 0 15px #ff4b4b; 
+        margin-top: 20px; 
+    }
     
     /* Kart Butonları */
     .stButton button { 
-        background: rgba(15, 15, 15, 0.9) !important; border: 1px solid #333 !important; 
-        color: #ff4b4b !important; border-radius: 8px !important; font-size: 22px !important; 
-        height: 60px !important; transition: all 0.4s ease-in-out !important; 
+        background: rgba(15, 15, 15, 0.9) !important; 
+        border: 1px solid #333 !important; 
+        color: #ff4b4b !important; 
+        border-radius: 8px !important; 
+        font-size: 22px !important; 
+        height: 60px !important; 
+        transition: all 0.4s ease-in-out !important; 
     }
-    .stButton button:hover { border-color: #ff4b4b !important; color: white !important; box-shadow: 0 0 20px #ff4b4b !important; transform: scale(1.15) rotate(2deg); }
+    .stButton button:hover { 
+        border-color: #ff4b4b !important; 
+        color: white !important; 
+        box-shadow: 0 0 20px #ff4b4b !important; 
+        transform: scale(1.15) rotate(2deg); 
+    }
     
-    /* Analiz Kutusu */
-    .report-box { background: rgba(5, 5, 5, 0.95); padding: 35px; border: 1px solid #444; border-left: 5px solid #ff4b4b; border-radius: 20px; line-height: 2; color: #d1d1d1; box-shadow: 0 10px 40px rgba(0,0,0,0.8); margin-top: 25px; }
+    /* Analiz Rapor Kutusu */
+    .report-box { 
+        background: rgba(5, 5, 5, 0.95); 
+        padding: 35px; 
+        border: 1px solid #444; 
+        border-left: 5px solid #ff4b4b; 
+        border-radius: 20px; 
+        line-height: 2; 
+        color: #d1d1d1; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
+        margin-top: 25px; 
+    }
     
     /* Profesör Animasyonu */
-    .mystic-prof { text-align: center; font-size: 100px; animation: float 4s ease-in-out infinite; filter: drop-shadow(0 0 20px #ff4b4b); margin-bottom: -20px; }
-    @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-25px); } 100% { transform: translateY(0px); } }
+    .mystic-prof { 
+        text-align: center; 
+        font-size: 100px; 
+        animation: float 4s ease-in-out infinite; 
+        filter: drop-shadow(0 0 20px #ff4b4b); 
+        margin-bottom: -20px; 
+    }
+    @keyframes float { 
+        0% { transform: translateY(0px); } 
+        50% { transform: translateY(-25px); } 
+        100% { transform: translateY(0px); } 
+    }
     
     /* Input Alanı */
-    .stTextInput input { background-color: #0a0a0a !important; color: #ff4b4b !important; border: 1px solid #444 !important; text-align: center; border-radius: 10px !important; padding: 15px !important; }
+    .stTextInput input { 
+        background-color: #0a0a0a !important; 
+        color: #ff4b4b !important; 
+        border: 1px solid #444 !important; 
+        text-align: center; 
+        border-radius: 10px !important; 
+        padding: 15px !important; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -85,11 +135,14 @@ if st.session_state.analiz_edildi:
         model = get_best_model()
         if model:
             try:
-                prompt = f"Sen 'The Cynic's Tarot' sistemisin. Sert ve stratejik bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}."
+                prompt = f"Sen 'The Cynic's Tarot' sistemisin. Sert ve dürüst bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}."
                 response = model.generate_content(prompt)
                 st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"Kozmik bir engel çıktı: {e}")
+                if "429" in str(e):
+                    st.warning("🌙 Kota doldu. Lütfen 30 saniye bekleyip tekrar basın.")
+                else:
+                    st.error(f"Kozmik bir engel: {e}")
 
     if st.button("YENİDEN BAŞLA"):
         st.session_state.secilen_indeksler = []
