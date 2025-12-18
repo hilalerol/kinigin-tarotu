@@ -62,31 +62,33 @@ st.markdown("""
 def create_pdf(text, language):
     pdf = FPDF()
     pdf.add_page()
-    # Unicode desteklemediği için standart fontu kullanıyoruz
-    pdf.set_font("Arial", 'B', 16)
+    pdf.set_auto_page_break(auto=True, margin=15) # Sayfa sonuna gelince yeni sayfaya geç
     
+    # Başlık Kısmı
+    pdf.set_font("Arial", 'B', 16)
     title = "KINIGIN TAROTU - RISK RAPORU" if language == "Türkçe" else "THE CYNIC'S TAROT - RISK REPORT"
     pdf.cell(190, 10, title, ln=True, align='C')
     pdf.ln(10)
     
+    # İçerik Kısmı
     pdf.set_font("Arial", size=12)
     
-    # TÜRKÇE KARAKTER DÜZELTME TABLOSU
-    # Latin-1 uyumlu hale getiriyoruz
+    # Karakter Düzeltme
     tr_map = {
         "ş": "s", "Ş": "S", "ı": "i", "İ": "I", "ğ": "g", "Ğ": "G", 
-        "ü": "u", "Ü": "U", "ö": "o", "Ö": "O", "ç": "c", "Ç": "C"
+        "ü": "u", "Ü": "U", "ö": "o", "Ö": "O", "ç": "c", "Ç": "C",
+        "*": "", "#": "" # Markdown işaretlerini temizle
     }
     
     clean_text = text
     for tr_char, en_char in tr_map.items():
         clean_text = clean_text.replace(tr_char, en_char)
     
-    # Latin-1'e güvenli çeviri
-    safe_text = clean_text.encode('latin-1', 'ignore').decode('latin-1')
+    # Satır satır yazdır (Boş çıkmaması için en güvenli yol)
+    pdf.multi_cell(0, 10, clean_text)
     
-    pdf.multi_cell(0, 10, safe_text)
-    return pdf.output(dest="S")
+    # Veriyi döndürürken 'bytes' tipinde olduğundan emin olalım
+    return pdf.output(dest="S").encode('latin-1')
 
 # --- 5. API VE MODEL ---
 genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
