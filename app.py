@@ -94,4 +94,56 @@ def get_model():
 model = get_model()
 
 # --- 7. ARAYÜZ ---
-st
+st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
+st.write(f"<p style='text-align:center; color:#444;'>{L['sub']}</p>", unsafe_allow_html=True)
+
+soru = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
+
+if not st.session_state.analiz_edildi:
+    st.write(f"### ✧ {len(st.session_state.secilen_indeksler)} / 3")
+    for row in range(6):
+        cols = st.columns(13)
+        for col in range(13):
+            idx = row * 13 + col
+            if idx < 78:
+                with cols[col]:
+                    label = "❂" if idx in st.session_state.secilen_indeksler else "✧"
+                    if st.button(label, key=f"k_{idx}"):
+                        if idx not in st.session_state.secilen_indeksler and len(st.session_state.secilen_indeksler) < 3:
+                            st.session_state.secilen_indeksler.append(idx)
+                            st.rerun()
+                        elif idx in st.session_state.secilen_indeksler:
+                            st.session_state.secilen_indeksler.remove(idx)
+                            st.rerun()
+
+if len(st.session_state.secilen_indeksler) == 3 and not st.session_state.analiz_edildi:
+    if st.button(L["btn_reveal"], use_container_width=True):
+        st.session_state.analiz_edildi = True
+        st.rerun()
+
+if st.session_state.analiz_edildi:
+    secilen_kartlar = random.sample(TAM_DESTE, 3)
+    st.divider()
+    cols = st.columns(3)
+    for i, kn in enumerate(secilen_kartlar):
+        with cols[i]: st.markdown(f"<div style='text-align:center; padding:20px; border:1px solid #333; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
+            
+    if model is None:
+        st.error("Google API ile bağlantı kurulamadı. Lütfen API anahtarını kontrol edin.")
+    else:
+        with st.spinner("..."):
+            try:
+                prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
+                response = model.generate_content(prompt)
+                report_text = response.text
+                st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
+                
+                pdf_data = create_pdf(report_text, st.session_state.lang)
+                st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
+            except Exception as e:
+                st.error(f"Beklenmedik bir hata: {str(e)[:50]}")
+    
+    if st.button(L["btn_reset"]):
+        st.session_state.secilen_indeksler = []
+        st.session_state.analiz_edildi = False
+        st.rerun()
