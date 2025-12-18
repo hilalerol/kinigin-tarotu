@@ -21,7 +21,7 @@ st.markdown("""
     }
     .stButton button:hover { border-color: #ff4b4b !important; box-shadow: 0 0 15px #ff4b4b; transform: scale(1.1); }
     
-    /* Analiz Kutusu (Senin paylaştığın kodun aktif hali) */
+    /* Analiz Kutusu */
     .report-box { 
         background: #0a0a0a; 
         padding: 25px; 
@@ -31,7 +31,7 @@ st.markdown("""
         color: #ddd; 
     }
     
-    /* Profesör (Senin paylaştığın kodun aktif hali) */
+    /* Profesör Animasyonu */
     .mystic-prof { 
         text-align: center; 
         font-size: 80px; 
