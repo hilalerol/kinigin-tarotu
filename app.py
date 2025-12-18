@@ -6,7 +6,7 @@ import time
 # --- 1. AYARLAR VE TASARIM ---
 st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
 
-# CSS tasarımını tek bir blokta, güvenli bir şekilde ekliyoruz
+# CSS KODLARINI BURADA GÜVENLİ BİR ŞEKİLDE PAKETLİYORUZ
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
@@ -21,11 +21,22 @@ st.markdown("""
     }
     .stButton button:hover { border-color: #ff4b4b !important; box-shadow: 0 0 15px #ff4b4b; transform: scale(1.1); }
     
-    /* Analiz Kutusu */
-    .report-box { background: #0a0a0a; padding: 25px; border-left: 5px solid #ff4b4b; border-radius: 15px; line-height: 1.8; color: #ddd; }
+    /* Analiz Kutusu (Senin paylaştığın kodun aktif hali) */
+    .report-box { 
+        background: #0a0a0a; 
+        padding: 25px; 
+        border-left: 5px solid #ff4b4b; 
+        border-radius: 15px; 
+        line-height: 1.8; 
+        color: #ddd; 
+    }
     
-    /* Profesör */
-    .mystic-prof { text-align: center; font-size: 80px; animation: float 3s infinite ease-in-out; }
+    /* Profesör (Senin paylaştığın kodun aktif hali) */
+    .mystic-prof { 
+        text-align: center; 
+        font-size: 80px; 
+        animation: float 3s infinite ease-in-out; 
+    } 
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
     </style>
     """, unsafe_allow_html=True)
@@ -43,7 +54,7 @@ def get_model():
 
 # --- 3. DURUM YÖNETİMİ ---
 if 'secilenler' not in st.session_state: st.session_state.secilenler = []
-if 'analiz' not in st.session_state: st.session_state.analiz = False
+if 'analiz_durum' not in st.session_state: st.session_state.analiz_durum = False
 
 # --- 4. ARAYÜZ ---
 st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
@@ -52,7 +63,7 @@ st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=
 soru = st.text_input("", placeholder="Kehanetini öğrenmek için 3 kart seç", label_visibility="collapsed")
 
 # KART SEÇİMİ
-if not st.session_state.analiz:
+if not st.session_state.analiz_durum:
     st.write(f"<p style='text-align:center;'>Seçilen: {len(st.session_state.secilenler)} / 3</p>", unsafe_allow_html=True)
     cols = st.columns(13)
     for i in range(78):
@@ -68,11 +79,11 @@ if not st.session_state.analiz:
 
     if len(st.session_state.secilenler) == 3:
         if st.button("KEHANETİ AÇ", use_container_width=True):
-            st.session_state.analiz = True
+            st.session_state.analiz_durum = True
             st.rerun()
 
 # ANALİZ GÖSTERİMİ
-if st.session_state.analiz:
+if st.session_state.analiz_durum:
     TAM_DESTE = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
     secilen_kartlar = random.sample(TAM_DESTE, 3)
     
@@ -80,12 +91,15 @@ if st.session_state.analiz:
         model = get_model()
         if model:
             try:
-                res = model.generate_content(f"Sert bir analiz yap. Soru: {soru}. Kartlar: {secilen_kartlar}")
+                res = model.generate_content(f"Sert bir tarot analizi yap. Soru: {soru}. Kartlar: {secilen_kartlar}")
                 st.markdown(f"<div class='report-box'>{res.text}</div>", unsafe_allow_html=True)
             except Exception as e:
-                st.error("Kozmik bir yoğunluk var, lütfen biraz bekleyip tekrar dene.")
+                if "429" in str(e):
+                    st.warning("🔮 Yıldızlar çok yoğun. 30 saniye sonra tekrar dene.")
+                else:
+                    st.error("Bağlantıda bir sorun oldu.")
 
     if st.button("YENİDEN BAŞLA"):
         st.session_state.secilenler = []
-        st.session_state.analiz = False
+        st.session_state.analiz_durum = False
         st.rerun()
