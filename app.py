@@ -12,11 +12,12 @@ BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress",
 KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
 
+# CSS TASARIM
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
     .stApp { background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); color: #e0e0e0; font-family: 'Special Elite', cursive; }
-    .main-title { font-family: 'Cinzel', serif; text-align: center; color: #D4AF37; letter-spacing: 5px; text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); margin-bottom: 10px; }
+    .main-title { font-family: 'Cinzel', serif; text-align: center; color: #D4AF37; letter-spacing: 5px; text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); }
     .premium-card { background: rgba(15, 15, 15, 0.95); padding: 30px; border: 1px solid #D4AF37; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); margin-bottom: 25px; }
     .stButton button { 
         background: linear-gradient(135deg, #111 0%, #222 100%) !important; 
@@ -35,11 +36,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DURUM YÖNETİMİ ---
 if 'step' not in st.session_state: st.session_state.step = "form"
 if 'sepet' not in st.session_state: st.session_state.sepet = []
 
-# --- 3. MAİL MOTORU ---
+# --- 2. MAİL FONKSİYONU ---
 def mail_at(alici, soru, analiz):
     try:
         sender = st.secrets["MY_EMAIL"]
@@ -47,50 +47,37 @@ def mail_at(alici, soru, analiz):
         msg = MIMEMultipart()
         msg['From'] = f"Profesör Minerva <{sender}>"
         msg['To'] = alici
-        msg['Subject'] = "Mühürlü Kehanet: Senin Özel Analizin Hazır"
-        html = f"""
-        <div style="background:#000; color:#ddd; padding:40px; border:2px solid #D4AF37; font-family:serif; border-radius:15px;">
-            <h2 style="color:#D4AF37; text-align:center; letter-spacing:3px;">MINERVA'NIN KEHANETİ</h2>
-            <hr style="border:0.5px solid #D4AF37;">
-            <p><b>Sorun:</b> {soru}</p>
-            <div style="background:#111; padding:20px; border-radius:10px; line-height:1.7;">{analiz.replace(chr(10), '<br>')}</div>
-            <p style="text-align:right; color:#D4AF37; font-size:18px;">— Profesör Minerva</p>
-        </div>
-        """
+        msg['Subject'] = "Kaderin Mühürlendi: Analizin Hazır"
+        html = f"<div style='background:#000; color:#ddd; padding:20px; border:2px solid #D4AF37; font-family:serif;'><h2>KEHANET</h2><p>{analiz}</p></div>"
         msg.attach(MIMEText(html, 'html'))
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(sender, pwd)
             server.send_message(msg)
         return True
-    except: return False
+    except Exception as e:
+        st.error(f"Mail Hatası: {e}")
+        return False
 
-# --- 4. AKIŞ ---
+# --- 3. AKIŞ ---
 st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
 st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=True)
 
-# ADIM 1: FORM VE KART SEÇİMİ
 if st.session_state.step == "form":
     with st.container():
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        email = st.text_input("Analizinin gönderileceği mail adresi:")
-        soru = st.text_area("Sorun nedir fani?")
+        email = st.text_input("Mail adresin:")
+        soru = st.text_area("Sorun nedir?")
         c1, c2, c3 = st.columns(3)
-        with c1:
-            yas = st.number_input("Yaşın", 15, 99, 25)
-            konu = st.selectbox("Konu", ["Genel", "Aşk", "Para", "Kariyer"])
-        with c2:
-            calisma = st.selectbox("İş Durumu", ["Çalışıyorum", "Öğrenci", "İşsiz"])
-            medeni = st.selectbox("Medeni Hal", ["Bekar", "Evli", "Boşanmış"])
-        with c3:
-            iliski = st.selectbox("İlişki", ["Var", "Yok", "Karmaşık"])
+        with c1: yas = st.number_input("Yaşın", 15, 99, 25)
+        with c2: konu = st.selectbox("Konu", ["Genel", "Aşk", "Para"])
+        with c3: iliski = st.selectbox("İlişki", ["Var", "Yok"])
         
-        st.write("---")
-        st.markdown(f'<p style="color:#D4AF37; text-align:center;">🔮 3 KART SEÇ: {len(st.session_state.sepet)}/3</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="color:#D4AF37; text-align:center;">🔮 Kart Seç: {len(st.session_state.sepet)}/3</p>', unsafe_allow_html=True)
         cols = st.columns(13)
         for i in range(78):
             with cols[i % 13]:
                 label = "❂" if i in st.session_state.sepet else "✧"
-                if st.button(label, key=f"k_{i}"):
+                if st.button(label, key=f"k{i}"):
                     if i not in st.session_state.sepet and len(st.session_state.sepet) < 3:
                         st.session_state.sepet.append(i)
                         st.rerun()
@@ -99,52 +86,37 @@ if st.session_state.step == "form":
                         st.rerun()
         
         if len(st.session_state.sepet) == 3 and email and soru:
-            if st.button("KEHANETİ HAZIRLA", use_container_width=True):
-                with st.spinner("Minerva mühürleri kontrol ediyor..."):
-                    try:
-                        genai.configure(api_key=st.secrets["MY_API_KEY"])
-                        # ÇÖZÜM: 'models/' ön ekini kaldırdık, saf isimle deniyoruz.
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        
-                        k_list = [TAM_DESTE[idx] for idx in st.session_state.sepet]
-                        prompt = f"Sert ol. {yas} yaş, {medeni}, {iliski}, {calisma}. Konu: {konu}. Soru: {soru}. Kartlar: {k_list}. Analiz yap ve ACI REÇETE ekle."
-                        res = model.generate_content(prompt)
-                        
-                        st.session_state.final_analysis = res.text
-                        st.session_state.final_email = email
-                        st.session_state.final_question = soru
-                        st.session_state.step = "payment"
-                        st.rerun()
-                    except Exception as e:
-                        st.error("Kozmik bir bağlantı hatası oluştu. Lütfen tekrar deneyin.")
+            if st.button("KEHANETİ HAZIRLA"):
+                try:
+                    genai.configure(api_key=st.secrets["MY_API_KEY"])
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    k_list = [TAM_DESTE[idx] for idx in st.session_state.sepet]
+                    prompt = f"Sen sert bir tarotçusun. Soru: {soru}, Kartlar: {k_list}. Analiz yap."
+                    res = model.generate_content(prompt)
+                    st.session_state.final_analysis = res.text
+                    st.session_state.final_email = email
+                    st.session_state.final_question = soru
+                    st.session_state.step = "payment"
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Kozmik Hata: {e}") # Hatanın ne olduğunu burada göreceğiz.
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ADIM 2: ÖDEME
 elif st.session_state.step == "payment":
     st.markdown('<div class="premium-card" style="text-align:center;">', unsafe_allow_html=True)
-    st.header("⏳ Analiz Mühürlendi")
-    st.write("Mektubun hazırlandı. Minerva'ya bir kahve ısmarlayarak kehaneti mailine uçurabilirsin.")
-    
-    # BURAYI KENDİ BANABİKAHVE LİNKİNLE GÜNCELLE
+    st.header("⏳ Analiz Hazır")
     b_link = "https://buymeacoffee.com/thesynicstarot" 
     st.markdown(f'<a href="{b_link}" target="_blank" class="coffee-btn">☕ KAHVE ISMARLA (50 TL)</a>', unsafe_allow_html=True)
-    
-    st.write("---")
-    if st.button("KAHVEYİ ISMARLADIM, GÖNDER"):
+    if st.button("ÖDEDİM, GÖNDER"):
         if mail_at(st.session_state.final_email, st.session_state.final_question, st.session_state.final_analysis):
             st.session_state.step = "done"
             st.rerun()
-        else: st.error("Mail gönderilemedi. Secrets ayarlarını kontrol et.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ADIM 3: BAŞARI
 elif st.session_state.step == "done":
     st.balloons()
-    st.markdown('<div class="premium-card" style="text-align:center;">', unsafe_allow_html=True)
-    st.header("✨ Mektubun Gönderildi!")
-    st.write(f"Analizin {st.session_state.final_email} adresine uçuruldu. Spam kutunu kontrol et!")
-    if st.button("YENİ KEHANET İÇİN BAŞA DÖN"):
+    st.markdown('<div class="premium-card" style="text-align:center;"><h1>✨ Gönderildi!</h1></div>', unsafe_allow_html=True)
+    if st.button("Başa Dön"):
         st.session_state.step = "form"
         st.session_state.sepet = []
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
