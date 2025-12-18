@@ -24,22 +24,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 5. API VE DİNAMİK MODEL BULUCU ---
-genai.configure(api_key=st.secrets["MY_API_KEY"])
+# --- 5. API ---
+try:
+    genai.configure(api_key=st.secrets["MY_API_KEY"])
+except:
+    st.error("Secrets panelinden MY_API_KEY tanımlanmamış!")
 
 def get_actual_model():
-    """Google'ın o an kabul ettiği gerçek model ismini bulur"""
     try:
-        # Google'dan aktif model listesini al
         models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        # Tercih sıramız
-        for target in ['models/gemini-1.5-flash', 'models/gemini-pro', 'gemini-1.5-flash', 'gemini-pro']:
+        # Kotayı daha iyi yöneten Flash modellerine öncelik veriyoruz
+        for target in ['models/gemini-1.5-flash', 'models/gemini-2.0-flash-exp', 'models/gemini-pro']:
             if target in models:
                 return genai.GenerativeModel(target)
-        # Hiçbiri yoksa listedeki ilk modeli ver
         return genai.GenerativeModel(models[0]) if models else None
-    except Exception as e:
-        st.error(f"Modellere ulaşılamadı: {e}")
+    except:
         return None
 
 # --- 6. ARAYÜZ ---
@@ -68,7 +67,6 @@ if not st.session_state.analiz_edildi:
             st.rerun()
 
 if st.session_state.analiz_edildi:
-    # Mistik bekleme
     placeholder = st.empty()
     placeholder.markdown("<h3 style='text-align:center; color:#ff4b4b;'>🔮 Profesör Minerva enerjiyi topluyor...</h3>", unsafe_allow_html=True)
     time.sleep(1.5)
@@ -85,9 +83,12 @@ if st.session_state.analiz_edildi:
                 response = model.generate_content(prompt)
                 st.markdown(f"<div class='report-box'>{response.text}</div>", unsafe_allow_html=True)
             except Exception as e:
-                st.error(f"Analiz sırasında hata: {e}")
+                if "429" in str(e):
+                    st.warning("🔮 Yıldızlar şu an çok yoğun. Profesör 1 dakika dinleniyor, lütfen bekleyip tekrar basın.")
+                else:
+                    st.error(f"Analiz sırasında hata: {e}")
         else:
-            st.error("Üzgünüm, şu an hiçbir yapay zeka modeli yanıt vermiyor.")
+            st.error("Şu an hiçbir model yanıt vermiyor.")
 
     if st.button("YENİDEN BAŞLA"):
         st.session_state.secilen_indeksler = []
