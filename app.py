@@ -1,91 +1,146 @@
 import streamlit as st
 import google.generativeai as genai
 import random
-import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# --- 1. AYARLAR ---
-st.set_page_config(page_title="The Cynic's Tarot", page_icon="🔮", layout="wide")
+# --- 1. AYARLAR VE TASARIM ---
+st.set_page_config(page_title="Minerva Tarot Premium", page_icon="🔮", layout="centered")
 
-# --- 2. TASARIM (CSS BURADA KİLİTLİDİR, DIŞARI SIZAMAZ) ---
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
     .stApp { background: radial-gradient(circle, #1a1a1a 0%, #000000 100%); color: #e0e0e0; font-family: 'Special Elite', cursive; }
     .main-title { font-family: 'Cinzel', serif; text-align: center; color: white; letter-spacing: 8px; text-shadow: 0 0 15px #ff4b4b; }
-    .report-box { background: rgba(5, 5, 5, 0.95); padding: 25px; border-left: 5px solid #ff4b4b; border-radius: 15px; line-height: 1.8; color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.8); margin-top: 20px; }
-    .mystic-prof { text-align: center; font-size: 80px; animation: float 4s infinite ease-in-out; filter: drop-shadow(0 0 15px #ff4b4b); }
+    .premium-card {
+        background: rgba(10, 10, 10, 0.9);
+        padding: 40px;
+        border: 2px solid #ff4b4b;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 0 30px rgba(255, 75, 75, 0.2);
+    }
+    .payment-link {
+        background: linear-gradient(45deg, #ff4b4b, #800000);
+        color: white !important;
+        padding: 18px 40px;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 50px;
+        display: inline-block;
+        margin-top: 25px;
+        font-size: 1.2rem;
+        transition: 0.4s;
+        border: none;
+    }
+    .payment-link:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(255, 75, 75, 0.5); }
+    .mystic-prof { text-align: center; font-size: 70px; animation: float 4s infinite ease-in-out; }
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-    div[data-testid="stExpander"] { background: rgba(10, 10, 10, 0.8); border: 1px solid #333; border-radius: 10px; }
-    .stButton button { background: rgba(15, 15, 15, 0.9) !important; border: 1px solid #333 !important; color: #ff4b4b !important; border-radius: 8px !important; transition: 0.4s; }
-    .stButton button:hover { border-color: #ff4b4b !important; box-shadow: 0 0 20px #ff4b4b; transform: scale(1.1); }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SABİT VERİLER ---
-TAM_DESTE = ["The Fool", "The Magician", "The High Priestess", "The Empress", "The Emperor", "The Hierophant", "The Lovers", "The Chariot", "Strength", "The Hermit", "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"] + [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
+# --- 2. MINERVA'NIN ÖZEL MAİL MOTORU ---
+def send_mystic_mail(to_email, user_question, ai_analysis):
+    sender_email = st.secrets["MY_EMAIL"]
+    sender_password = st.secrets["MY_EMAIL_PASSWORD"]
 
-# --- 4. DURUM YÖNETİMİ ---
-if 'kart_sepeti' not in st.session_state: st.session_state.kart_sepeti = []
-if 'analiz_durumu' not in st.session_state: st.session_state.analiz_durumu = False
+    msg = MIMEMultipart()
+    msg['From'] = f"Profesör Minerva <{sender_email}>"
+    msg['To'] = to_email
+    msg['Subject'] = "Kaderin Mühürlendi: Özel Analizin Hazır"
 
-# --- 5. API ---
-genai.configure(api_key=st.secrets["MY_API_KEY"])
+    # HTML Mail Tasarımı (Eski bir mektup havası)
+    html_content = f"""
+    <html>
+    <body style="background-color: #000; color: #ddd; font-family: serif; padding: 20px;">
+        <div style="border: 2px solid #ff4b4b; padding: 30px; border-radius: 15px; background-color: #0a0a0a;">
+            <h1 style="color: #ff4b4b; text-align: center; font-family: 'Cinzel', serif;">MINERVA'NIN KEHANETİ</h1>
+            <p style="font-style: italic; color: #888; text-align: center;">"Gerçekler bazen acıtır fani, ama seni özgür kılar."</p>
+            <hr style="border: 0.5px solid #333;">
+            <p><strong>Senin Sorun:</strong> {user_question}</p>
+            <div style="line-height: 1.8; font-size: 1.1rem; color: #eee; background: #111; padding: 20px; border-radius: 10px;">
+                {ai_analysis.replace('\n', '<br>')}
+            </div>
+            <br>
+            <p style="text-align: right; font-weight: bold; color: #ff4b4b;">— Profesör Minerva</p>
+            <p style="font-size: 0.8rem; color: #444; text-align: center;">Bu analiz Profesör Minerva'nın dijital kütüphanesinde mühürlenmiştir.</p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html_content, 'html'))
 
-def get_model():
     try:
-        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for m in ['models/gemini-1.5-flash', 'models/gemini-pro']:
-            if m in models: return genai.GenerativeModel(m)
-        return genai.GenerativeModel(models[0])
-    except: return None
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        return True
+    except:
+        return False
 
-# --- 6. ARAYÜZ ---
+# --- 3. ANA AKIŞ ---
 st.markdown('<div class="mystic-prof">🧙‍♀️</div>', unsafe_allow_html=True)
 st.markdown('<h1 class="main-title">THE CYNIC\'S TAROT</h1>', unsafe_allow_html=True)
+st.markdown('<p style="text-align:center;">Özel Seans ve Derin Analiz Ofisi</p>', unsafe_allow_html=True)
 
-with st.expander("🔮 KOZMİK PROFİLİN", expanded=True):
-    soru = st.text_input("Sorun nedir?", placeholder="Geleceğimi söyle...")
-    c1, c2 = st.columns(2)
-    with c1:
-        yas = st.number_input("Yaş", 15, 99, 25)
-        medeni = st.selectbox("Medeni Hal", ["Bekar", "Evli", "Boşanmış"])
-    with c2:
-        calisma = st.selectbox("İş", ["Çalışan", "Öğrenci", "İşsiz"])
-        iliski = st.selectbox("İlişki", ["Var", "Yok", "Karmaşık"])
+# Oturum Durumları
+if 'order_status' not in st.session_state: st.session_state.order_status = "idle"
 
-if not st.session_state.analiz_durumu:
-    st.write(f"<p style='text-align:center;'>Seçilen: {len(st.session_state.kart_sepeti)} / 3</p>", unsafe_allow_html=True)
-    cols = st.columns(13)
-    for i in range(78):
-        with cols[i % 13]:
-            label = "❂" if i in st.session_state.kart_sepeti else "✧"
-            if st.button(label, key=f"b_{i}"):
-                if i not in st.session_state.kart_sepeti and len(st.session_state.kart_sepeti) < 3:
-                    st.session_state.kart_sepeti.append(i)
-                elif i in st.session_state.kart_sepeti:
-                    st.session_state.kart_sepeti.remove(i)
-                st.rerun()
-    if len(st.session_state.kart_sepeti) == 3:
-        if st.button("KADERİNİ MÜHÜRLE", use_container_width=True):
-            st.session_state.analiz_durumu = True
+# ADIM 1: Veri Toplama
+if st.session_state.order_status == "idle":
+    with st.container():
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        user_email = st.text_input("Analizin hangi adrese gönderilsin?", placeholder="fani@mail.com")
+        user_question = st.text_area("Ruhunu sıkan o soru nedir?", placeholder="Tüm detayları yaz...")
+        yas = st.number_input("Yaşın", 15, 99, 25)
+        
+        if st.button("KEHANETİ BAŞLAT"):
+            if "@" not in user_email or len(user_question) < 10:
+                st.error("Lütfen geçerli bir mail ve soru gir.")
+            else:
+                # Arka planda analizi hazırla ama henüz gönderme
+                try:
+                    genai.configure(api_key=st.secrets["MY_API_KEY"])
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    prompt = f"Sert ol. {yas} yaşında biri şunu sordu: {user_question}. Analiz et ve ACI REÇETE ekle."
+                    response = model.generate_content(prompt)
+                    st.session_state.temp_analysis = response.text
+                    st.session_state.temp_email = user_email
+                    st.session_state.temp_question = user_question
+                    st.session_state.order_status = "waiting_payment"
+                    st.rerun()
+                except:
+                    st.error("Kozmik hatlar şu an meşgul, lütfen 1 dakika sonra tekrar dene.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# ADIM 2: Ödeme Yönlendirme
+elif st.session_state.order_status == "waiting_payment":
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.success("✅ Analizin Hazırlandı ve Mühürlendi!")
+    st.write("Analizinin mail kutuna düşmesi için son bir adım kaldı.")
+    st.write("Profesör Minerva'nın emeği için sembolik bedeli öde.")
+    
+    shopier_url = "https://www.shopier.com/SizinDukkanLinkiniz" # BURAYI GÜNCELLE
+    st.markdown(f'<a href="{shopier_url}" target="_blank" class="payment-link">💳 50 TL ÖDE VE ANALİZİ AL</a>', unsafe_allow_html=True)
+    
+    st.info("💡 Ödeme sonrası butona basarak analizi anında mailine uçurabilirsin.")
+    if st.button("ÖDEMEYİ YAPTIM, MAİLİMİ GÖNDER"):
+        if send_mystic_mail(st.session_state.temp_email, st.session_state.temp_question, st.session_state.temp_analysis):
+            st.session_state.order_status = "completed"
             st.rerun()
-else:
-    try:
-        secilenler = []
-        for idx in st.session_state.kart_sepeti:
-            yon = " (TERS)" if random.random() < 0.3 else " (DÜZ)"
-            secilenler.append(TAM_DESTE[idx] + yon)
-        
-        st.write(f"<p style='text-align:center; color:#ff4b4b;'>{ ' | '.join(secilenler) }</p>", unsafe_allow_html=True)
-        
-        with st.spinner("Minerva yazıyor..."):
-            model = get_model()
-            if model:
-                res = model.generate_content(f"Sert ol. Profil: {yas}, {calisma}, {medeni}, {iliski}. Soru: {soru}. Kartlar: {secilenler}. Sonunda 3 maddelik ACI REÇETE yaz.")
-                st.markdown(f"<div class='report-box'>{res.text}</div>", unsafe_allow_html=True)
-    except Exception as e:
-        st.error(f"Hata: {e}")
-    if st.button("SIFIRLA"):
-        st.session_state.kart_sepeti = []
-        st.session_state.analiz_durumu = False
+        else:
+            st.error("Mail gönderilirken bir sorun oldu. Lütfen tekrar dene.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ADIM 3: Tamamlandı
+elif st.session_state.order_status == "completed":
+    st.balloons()
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.header("✨ Mektubun Yolda!")
+    st.write(f"Analizin **{st.session_state.temp_email}** adresine gönderildi.")
+    st.write("Spam (Gereksiz) klasörünü kontrol etmeyi unutma.")
+    if st.button("YENİ KEHANET İÇİN BAŞA DÖN"):
+        st.session_state.order_status = "idle"
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
