@@ -11,7 +11,7 @@ BUYUK_ARKANA = ["The Fool", "The Magician", "The High Priestess", "The Empress",
 KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] for n in ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"]]
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
 
-# --- 3. DİL DESTEĞİ VE METİNLER ---
+# --- 3. SESSION STATE ---
 if 'lang' not in st.session_state: st.session_state.lang = "Türkçe"
 if 'secilen_indeksler' not in st.session_state: st.session_state.secilen_indeksler = []
 if 'analiz_edildi' not in st.session_state: st.session_state.analiz_edildi = False
@@ -41,7 +41,7 @@ with st.sidebar:
     st.title("🌐 Language")
     st.session_state.lang = st.radio("", ["Türkçe", "English"])
     st.divider()
-    st.caption("Dev: Hilal Erol | v11.0 Platinum")
+    st.caption("Dev: Hilal Erol | v11.1 Platinum")
 
 L = texts[st.session_state.lang]
 
@@ -55,7 +55,6 @@ def create_pdf(text, lang):
     pdf.ln(10)
     pdf.set_font("Arial", size=12)
     
-    # Karakter Temizleme (PDF çökmemesi için)
     tr_map = {"ş":"s","Ş":"S","ı":"i","İ":"I","ğ":"g","Ğ":"G","ü":"u","Ü":"U","ö":"o","Ö":"O","ç":"c","Ç":"C","\u2013":"-","*":"","#":""}
     clean_text = text
     for c, r in tr_map.items(): clean_text = clean_text.replace(c, r)
@@ -71,64 +70,28 @@ st.markdown(f"""
     .main-title {{ font-family: serif; text-align: center; letter-spacing: 8px; color: #ffffff; }}
     .stButton button {{ background-color: #0a0a0a !important; border: 1px solid #333 !important; color: #555 !important; font-size: 16px !important; width: 100% !important; }}
     .stButton button:hover {{ border-color: #ff4b4b !important; color: white !important; }}
-    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border-left: 5px solid #ff4b4b; color: #e0e0e0; }}
+    .report-box {{ background: #0a0a0a; padding: 25px; border-radius: 15px; border-left: 5px solid #ff4b4b; color: #e0e0e0; margin-top: 20px; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. API ---
+# --- 6. API VE MODEL YÜKLEME (KESİN ÇÖZÜM) ---
 genai.configure(api_key="AIzaSyDmD1S5e1WmtiiKR63MRNM6Flbe1MER5i4")
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+@st.cache_resource
+def get_model():
+    # Hangi ismin çalıştığını otomatik bulan zeki fonksiyon
+    model_options = ['gemini-1.5-flash', 'models/gemini-1.5-flash', 'gemini-pro']
+    for m_name in model_options:
+        try:
+            m = genai.GenerativeModel(m_name)
+            # Test amaçlı küçük bir çağrı yap
+            m.generate_content("test")
+            return m
+        except:
+            continue
+    return None
+
+model = get_model()
 
 # --- 7. ARAYÜZ ---
-st.markdown(f'<h1 class="main-title">{L["title"]}</h1>', unsafe_allow_html=True)
-st.write(f"<p style='text-align:center; color:#444;'>{L['sub']}</p>", unsafe_allow_html=True)
-
-soru = st.text_input("", placeholder=L["placeholder"], label_visibility="collapsed")
-
-if not st.session_state.analiz_edildi:
-    st.write(f"### ✧ {len(st.session_state.secilen_indeksler)} / 3")
-    for row in range(6):
-        cols = st.columns(13)
-        for col in range(13):
-            idx = row * 13 + col
-            if idx < 78:
-                with cols[col]:
-                    label = "❂" if idx in st.session_state.secilen_indeksler else "✧"
-                    if st.button(label, key=f"k_{idx}"):
-                        if idx not in st.session_state.secilen_indeksler and len(st.session_state.secilen_indeksler) < 3:
-                            st.session_state.secilen_indeksler.append(idx)
-                            st.rerun()
-                        elif idx in st.session_state.secilen_indeksler:
-                            st.session_state.secilen_indeksler.remove(idx)
-                            st.rerun()
-
-if len(st.session_state.secilen_indeksler) == 3 and not st.session_state.analiz_edildi:
-    if st.button(L["btn_reveal"], use_container_width=True):
-        st.session_state.analiz_edildi = True
-        st.rerun()
-
-if st.session_state.analiz_edildi:
-    secilen_kartlar = random.sample(TAM_DESTE, 3)
-    st.divider()
-    cols = st.columns(3)
-    for i, kn in enumerate(secilen_kartlar):
-        with cols[i]: st.markdown(f"<div style='text-align:center; padding:20px; border:1px solid #333; border-radius:10px;'>{kn}</div>", unsafe_allow_html=True)
-            
-    with st.spinner("..."):
-        try:
-            prompt = f"{L['prompt']} Soru: {soru}. Kartlar: {secilen_kartlar}."
-            response = model.generate_content(prompt)
-            report_text = response.text
-            st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
-            
-            # PDF İndirme Butonu
-            pdf_data = create_pdf(report_text, st.session_state.lang)
-            st.download_button(label=L["pdf_btn"], data=pdf_data, file_name="Cynic_Report.pdf", mime="application/pdf")
-            
-        except Exception as e:
-            st.error("API Bağlantı Hatası. Anahtarınızı kontrol edin.")
-    
-    if st.button(L["btn_reset"]):
-        st.session_state.secilen_indeksler = []
-        st.session_state.analiz_edildi = False
-        st.rerun()
+st
