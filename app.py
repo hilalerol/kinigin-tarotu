@@ -14,17 +14,35 @@ KUCUK_ARKANA = [f"{n} of {s}" for s in ["Swords", "Cups", "Wands", "Pentacles"] 
 TAM_DESTE = BUYUK_ARKANA + KUCUK_ARKANA
 
 # TASARIM BLOĞU (Yazı olarak görünmemesi için style etiketleri içinde)
+# --- TASARIM BAŞLANGICI ---
 st.markdown("""
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
-    /* GENEL TEMA */
-    .stApp { background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); color: #e0e0e0; font-family: 'Special Elite', cursive; }
+    /* ARKA PLAN VE GENEL */
+    .stApp { 
+        background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); 
+        color: #e0e0e0; 
+        font-family: 'Special Elite', cursive; 
+    }
     
     /* BAŞLIK */
-    .main-title { font-family: 'Cinzel', serif; text-align: center; color: #D4AF37; letter-spacing: 5px; text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); margin-bottom: 0px; }
-    
+    .main-title { 
+        font-family: 'Cinzel', serif; 
+        text-align: center; 
+        color: #D4AF37; 
+        letter-spacing: 5px; 
+        text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); 
+    }
+
     /* KART ŞEKLİNDE KUTULAR */
-    .premium-card { background: rgba(15, 15, 15, 0.95); padding: 30px; border: 1px solid #D4AF37; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); margin-bottom: 25px; }
+    .premium-card { 
+        background: rgba(15, 15, 15, 0.95); 
+        padding: 30px; 
+        border: 1px solid #D4AF37; 
+        border-radius: 15px; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.8); 
+        margin-bottom: 25px; 
+    }
     
     /* ÖZEL BUTONLAR */
     .stButton button { 
@@ -36,21 +54,45 @@ st.markdown("""
         transition: 0.4s; 
         width: 100%;
     }
-    .stButton button:hover { box-shadow: 0 0 15px #D4AF37; transform: translateY(-3px); color: white !important; }
+    .stButton button:hover { 
+        box-shadow: 0 0 15px #D4AF37; 
+        transform: translateY(-3px); 
+        color: white !important; 
+    }
     
     /* KAHVE BUTONU */
     .coffee-btn { 
-        display: inline-block; padding: 18px 40px; background: linear-gradient(45deg, #D4AF37, #B8860B); 
-        color: black !important; text-decoration: none; font-weight: bold; border-radius: 50px; 
-        font-size: 1.2rem; transition: 0.4s; border: none; text-align: center;
+        display: inline-block; 
+        padding: 18px 40px; 
+        background: linear-gradient(45deg, #D4AF37, #B8860B); 
+        color: black !important; 
+        text-decoration: none; 
+        font-weight: bold; 
+        border-radius: 50px; 
+        font-size: 1.2rem; 
+        transition: 0.4s; 
+        border: none; 
+        text-align: center;
     }
-    .coffee-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px #D4AF37; }
+    .coffee-btn:hover { 
+        transform: scale(1.05); 
+        box-shadow: 0 0 25px #D4AF37; 
+    }
     
     /* ANİMASYON */
-    .mystic-prof { text-align: center; font-size: 70px; animation: float 4s infinite ease-in-out; filter: drop-shadow(0 0 10px #D4AF37); }
-    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    .mystic-prof { 
+        text-align: center; 
+        font-size: 70px; 
+        animation: float 4s infinite ease-in-out; 
+        filter: drop-shadow(0 0 10px #D4AF37); 
+    }
+    @keyframes float { 
+        0%, 100% { transform: translateY(0); } 
+        50% { transform: translateY(-15px); } 
+    }
     </style>
     """, unsafe_allow_html=True)
+# --- TASARIM BİTİŞİ ---
 
 # --- 2. DURUM YÖNETİMİ ---
 if 'step' not in st.session_state: st.session_state.step = "form"
